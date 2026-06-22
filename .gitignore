@@ -22,5 +22,8 @@ backend/DESIGN.md
 
 
 CLAUDE.md
+.agents/
+.claude/
+skills-lock.json
 
 graphify-out/
