@@ -127,11 +127,35 @@ func assertEq(t *testing.T, name string, want, got any) {
 	}
 }
 
-func TestIntegration(t *testing.T) {
-	today := time.Now().Format("2006-01-02")
-	yesterday := ago(1, 0).Format("2006-01-02")
+func assertFloatNear(t *testing.T, name string, want, got, delta float64) {
+	t.Helper()
+	if got < want-delta || got > want+delta {
+		t.Errorf("FAIL %s: expected %v +/- %v, got %v", name, want, delta, got)
+	}
+}
 
-	var userEntryID, adminEntryID uint
+type integrationState struct {
+	today        string
+	yesterday    string
+	userEntryID  uint
+	adminEntryID uint
+}
+
+func TestIntegration(t *testing.T) {
+	state := &integrationState{
+		today:     time.Now().Format("2006-01-02"),
+		yesterday: ago(1, 0).Format("2006-01-02"),
+	}
+
+	runAuthChecks(t)
+	runDailySummaryTests(t, state)
+	runUserFoodEntryTests(t, state)
+	runAdminFoodEntryTests(t, state)
+	runAdminReportTests(t)
+}
+
+func runAuthChecks(t *testing.T) {
+	t.Helper()
 
 	// Auth Checks
 	t.Run("no_token_401", func(t *testing.T) {
@@ -146,6 +170,10 @@ func TestIntegration(t *testing.T) {
 		w := apiReq("GET", "/api/admin/food-entries", "user-token-123", "")
 		checkCode(t, "user_hits_admin", w, 403)
 	})
+}
+
+func runDailySummaryTests(t *testing.T, state *integrationState) {
+	t.Helper()
 
 	// Daily Summary
 	t.Run("daily_summary_today_john", func(t *testing.T) {
@@ -161,7 +189,7 @@ func TestIntegration(t *testing.T) {
 		assertEq(t, "calorie_limit", float64(2100), d["calorie_limit"])
 	})
 	t.Run("daily_summary_yesterday_john", func(t *testing.T) {
-		w := apiReq("GET", "/api/daily-summary?date="+yesterday, "user-token-123", "")
+		w := apiReq("GET", "/api/daily-summary?date="+state.yesterday, "user-token-123", "")
 		if !checkCode(t, "daily_summary_yesterday_john", w, 200) {
 			return
 		}
@@ -190,7 +218,7 @@ func TestIntegration(t *testing.T) {
 	})
 	t.Run("daily_summaries_range_7days", func(t *testing.T) {
 		from := ago(6, 0).Format("2006-01-02")
-		w := apiReq("GET", "/api/daily-summaries?date_from="+from+"&date_to="+today, "user-token-123", "")
+		w := apiReq("GET", "/api/daily-summaries?date_from="+from+"&date_to="+state.today, "user-token-123", "")
 		if !checkCode(t, "daily_summaries_range", w, 200) {
 			return
 		}
@@ -202,13 +230,17 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 	t.Run("daily_summaries_missing_date_from_400", func(t *testing.T) {
-		w := apiReq("GET", "/api/daily-summaries?date_to="+today, "user-token-123", "")
+		w := apiReq("GET", "/api/daily-summaries?date_to="+state.today, "user-token-123", "")
 		checkCode(t, "daily_summaries_missing_date_from", w, 400)
 	})
 	t.Run("daily_summaries_date_from_after_date_to_400", func(t *testing.T) {
-		w := apiReq("GET", "/api/daily-summaries?date_from="+today+"&date_to="+yesterday, "user-token-123", "")
+		w := apiReq("GET", "/api/daily-summaries?date_from="+state.today+"&date_to="+state.yesterday, "user-token-123", "")
 		checkCode(t, "daily_summaries_date_from_after_date_to", w, 400)
 	})
+}
+
+func runUserFoodEntryTests(t *testing.T, state *integrationState) {
+	t.Helper()
 
 	// User Food Entries
 	t.Run("list_no_filter", func(t *testing.T) {
@@ -223,7 +255,7 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 	t.Run("list_date_filter", func(t *testing.T) {
-		w := apiReq("GET", "/api/food-entries?date_from="+today+"&date_to="+today, "user-token-123", "")
+		w := apiReq("GET", "/api/food-entries?date_from="+state.today+"&date_to="+state.today, "user-token-123", "")
 		checkCode(t, "list_date_filter", w, 200)
 	})
 	t.Run("list_bad_date_400", func(t *testing.T) {
@@ -231,11 +263,11 @@ func TestIntegration(t *testing.T) {
 		checkCode(t, "list_bad_date", w, 400)
 	})
 	t.Run("list_date_from_after_date_to_400", func(t *testing.T) {
-		w := apiReq("GET", "/api/food-entries?date_from="+today+"&date_to="+yesterday, "user-token-123", "")
+		w := apiReq("GET", "/api/food-entries?date_from="+state.today+"&date_to="+state.yesterday, "user-token-123", "")
 		checkCode(t, "list_date_from_after_date_to", w, 400)
 	})
 	t.Run("create_entry", func(t *testing.T) {
-		body := fmt.Sprintf(`{"food_name":"Test Meal","calories":500,"price":75.5,"entry_date":"%sT12:00:00Z"}`, today)
+		body := fmt.Sprintf(`{"food_name":"Test Meal","calories":500,"price":75.5,"entry_date":"%sT12:00:00Z"}`, state.today)
 		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
 		if !checkCode(t, "create_entry", w, 200) {
 			return
@@ -245,13 +277,13 @@ func TestIntegration(t *testing.T) {
 		assertEq(t, "calories", float64(500), d["calories"])
 		assertEq(t, "price", 75.5, d["price"])
 		if id, ok := d["id"].(float64); ok && id > 0 {
-			userEntryID = uint(id)
+			state.userEntryID = uint(id)
 		} else {
 			t.Errorf("FAIL create_entry: missing id: %s", w.Body.String())
 		}
 	})
 	t.Run("create_calories_zero", func(t *testing.T) {
-		body := fmt.Sprintf(`{"food_name":"Zero Cal Snack","calories":0,"price":10.0,"entry_date":"%sT12:00:00Z"}`, today)
+		body := fmt.Sprintf(`{"food_name":"Zero Cal Snack","calories":0,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
 		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
 		if !checkCode(t, "create_calories_zero", w, 200) {
 			return
@@ -259,7 +291,7 @@ func TestIntegration(t *testing.T) {
 		assertEq(t, "calories_zero", float64(0), dataField(w.Body.Bytes())["calories"])
 	})
 	t.Run("create_empty_food_name_400", func(t *testing.T) {
-		body := fmt.Sprintf(`{"food_name":"  ","calories":100,"price":10.0,"entry_date":"%sT12:00:00Z"}`, today)
+		body := fmt.Sprintf(`{"food_name":"  ","calories":100,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
 		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
 		if !checkCode(t, "create_empty_food_name", w, 400) {
 			return
@@ -267,11 +299,11 @@ func TestIntegration(t *testing.T) {
 		assertEq(t, "success", false, decodeBody(w.Body.Bytes())["success"])
 	})
 	t.Run("put_full_update", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID from create_entry")
 		}
-		body := fmt.Sprintf(`{"food_name":"Updated Meal","calories":600,"price":80.0,"entry_date":"%sT12:00:00Z"}`, today)
-		w := apiReq("PUT", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-123", body)
+		body := fmt.Sprintf(`{"food_name":"Updated Meal","calories":600,"price":80.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("PUT", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", body)
 		if !checkCode(t, "put_full_update", w, 200) {
 			return
 		}
@@ -280,59 +312,63 @@ func TestIntegration(t *testing.T) {
 		assertEq(t, "calories", float64(600), d["calories"])
 	})
 	t.Run("put_missing_field_400", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID")
 		}
-		w := apiReq("PUT", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-123", `{"food_name":"Partial"}`)
+		w := apiReq("PUT", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", `{"food_name":"Partial"}`)
 		checkCode(t, "put_missing_field", w, 400)
 	})
 	t.Run("patch_calories_only", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID")
 		}
-		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-123", `{"calories":350}`)
+		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", `{"calories":350}`)
 		if !checkCode(t, "patch_calories_only", w, 200) {
 			return
 		}
 		assertEq(t, "calories", float64(350), dataField(w.Body.Bytes())["calories"])
 	})
 	t.Run("patch_calories_zero", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID")
 		}
-		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-123", `{"calories":0}`)
+		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", `{"calories":0}`)
 		if !checkCode(t, "patch_calories_zero", w, 200) {
 			return
 		}
 		assertEq(t, "calories_zero", float64(0), dataField(w.Body.Bytes())["calories"])
 	})
 	t.Run("patch_jane_john_entry_403", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID")
 		}
-		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-456", `{"calories":999}`)
+		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-456", `{"calories":999}`)
 		if !checkCode(t, "patch_jane_john_entry", w, 403) {
 			return
 		}
 		assertEq(t, "error", "forbidden", decodeBody(w.Body.Bytes())["error"])
 	})
 	t.Run("delete_wrong_user_403", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID")
 		}
-		w := apiReq("DELETE", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-456", "")
+		w := apiReq("DELETE", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-456", "")
 		if !checkCode(t, "delete_wrong_user", w, 403) {
 			return
 		}
 		assertEq(t, "error", "forbidden", decodeBody(w.Body.Bytes())["error"])
 	})
 	t.Run("delete_own_entry", func(t *testing.T) {
-		if userEntryID == 0 {
+		if state.userEntryID == 0 {
 			t.Skip("no entry ID")
 		}
-		w := apiReq("DELETE", fmt.Sprintf("/api/food-entries/%d", userEntryID), "user-token-123", "")
+		w := apiReq("DELETE", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", "")
 		checkCode(t, "delete_own_entry", w, 200)
 	})
+}
+
+func runAdminFoodEntryTests(t *testing.T, state *integrationState) {
+	t.Helper()
 
 	// Admin Food Entries
 	t.Run("admin_list_all", func(t *testing.T) {
@@ -345,7 +381,7 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 	t.Run("admin_list_all_date_filter", func(t *testing.T) {
-		w := apiReq("GET", "/api/admin/food-entries?date_from="+today+"&date_to="+today, "admin-token-789", "")
+		w := apiReq("GET", "/api/admin/food-entries?date_from="+state.today+"&date_to="+state.today, "admin-token-789", "")
 		checkCode(t, "admin_list_all_date_filter", w, 200)
 	})
 	t.Run("admin_list_all_bad_date_400", func(t *testing.T) {
@@ -353,7 +389,7 @@ func TestIntegration(t *testing.T) {
 		checkCode(t, "admin_list_all_bad_date", w, 400)
 	})
 	t.Run("admin_create_for_john", func(t *testing.T) {
-		body := fmt.Sprintf(`{"user_id":%d,"food_name":"Admin Created Meal","calories":300,"price":50.0,"entry_date":"%sT12:00:00Z"}`, johnID, today)
+		body := fmt.Sprintf(`{"user_id":%d,"food_name":"Admin Created Meal","calories":300,"price":50.0,"entry_date":"%sT12:00:00Z"}`, johnID, state.today)
 		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
 		if !checkCode(t, "admin_create_for_john", w, 200) {
 			return
@@ -361,13 +397,13 @@ func TestIntegration(t *testing.T) {
 		d := dataField(w.Body.Bytes())
 		assertEq(t, "user_id", float64(johnID), d["user_id"])
 		if id, ok := d["id"].(float64); ok && id > 0 {
-			adminEntryID = uint(id)
+			state.adminEntryID = uint(id)
 		} else {
 			t.Errorf("FAIL admin_create_for_john: no id: %s", w.Body.String())
 		}
 	})
 	t.Run("admin_create_user_not_found_404", func(t *testing.T) {
-		body := fmt.Sprintf(`{"user_id":9999,"food_name":"Ghost Meal","calories":100,"price":10.0,"entry_date":"%sT12:00:00Z"}`, today)
+		body := fmt.Sprintf(`{"user_id":9999,"food_name":"Ghost Meal","calories":100,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
 		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
 		if !checkCode(t, "admin_create_user_not_found", w, 404) {
 			return
@@ -375,10 +411,10 @@ func TestIntegration(t *testing.T) {
 		assertEq(t, "success", false, decodeBody(w.Body.Bytes())["success"])
 	})
 	t.Run("admin_get_by_id", func(t *testing.T) {
-		if adminEntryID == 0 {
+		if state.adminEntryID == 0 {
 			t.Skip("no admin entry ID")
 		}
-		w := apiReq("GET", fmt.Sprintf("/api/admin/food-entries/%d", adminEntryID), "admin-token-789", "")
+		w := apiReq("GET", fmt.Sprintf("/api/admin/food-entries/%d", state.adminEntryID), "admin-token-789", "")
 		if !checkCode(t, "admin_get_by_id", w, 200) {
 			return
 		}
@@ -387,33 +423,37 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 	t.Run("admin_put", func(t *testing.T) {
-		if adminEntryID == 0 {
+		if state.adminEntryID == 0 {
 			t.Skip("no admin entry ID")
 		}
-		body := fmt.Sprintf(`{"food_name":"Admin Updated Meal","calories":400,"price":60.0,"entry_date":"%sT12:00:00Z"}`, today)
-		w := apiReq("PUT", fmt.Sprintf("/api/admin/food-entries/%d", adminEntryID), "admin-token-789", body)
+		body := fmt.Sprintf(`{"food_name":"Admin Updated Meal","calories":400,"price":60.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("PUT", fmt.Sprintf("/api/admin/food-entries/%d", state.adminEntryID), "admin-token-789", body)
 		if !checkCode(t, "admin_put", w, 200) {
 			return
 		}
 		assertEq(t, "food_name", "Admin Updated Meal", dataField(w.Body.Bytes())["food_name"])
 	})
 	t.Run("admin_patch", func(t *testing.T) {
-		if adminEntryID == 0 {
+		if state.adminEntryID == 0 {
 			t.Skip("no admin entry ID")
 		}
-		w := apiReq("PATCH", fmt.Sprintf("/api/admin/food-entries/%d", adminEntryID), "admin-token-789", `{"food_name":"Patched Name"}`)
+		w := apiReq("PATCH", fmt.Sprintf("/api/admin/food-entries/%d", state.adminEntryID), "admin-token-789", `{"food_name":"Patched Name"}`)
 		if !checkCode(t, "admin_patch", w, 200) {
 			return
 		}
 		assertEq(t, "food_name", "Patched Name", dataField(w.Body.Bytes())["food_name"])
 	})
 	t.Run("admin_delete", func(t *testing.T) {
-		if adminEntryID == 0 {
+		if state.adminEntryID == 0 {
 			t.Skip("no admin entry ID")
 		}
-		w := apiReq("DELETE", fmt.Sprintf("/api/admin/food-entries/%d", adminEntryID), "admin-token-789", "")
+		w := apiReq("DELETE", fmt.Sprintf("/api/admin/food-entries/%d", state.adminEntryID), "admin-token-789", "")
 		checkCode(t, "admin_delete", w, 200)
 	})
+}
+
+func runAdminReportTests(t *testing.T) {
+	t.Helper()
 
 	// Admin Reports
 	t.Run("admin_get_report", func(t *testing.T) {
@@ -422,10 +462,20 @@ func TestIntegration(t *testing.T) {
 			return
 		}
 		d := dataField(w.Body.Bytes())
-		for _, key := range []string{"entries_last_7_days", "entries_previous_7_days", "users_count", "average_calories_per_user_last_7_days"} {
-			if d[key] == nil {
-				t.Errorf("FAIL admin_get_report: missing field %q", key)
-			}
+		assertEq(t, "entries_last_7_days", float64(18), d["entries_last_7_days"])
+		assertEq(t, "entries_previous_7_days", float64(8), d["entries_previous_7_days"])
+		assertEq(t, "users_count", float64(3), d["users_count"])
+		avg, ok := d["average_calories_per_user_last_7_days"].(float64)
+		if !ok {
+			t.Fatalf("FAIL admin_get_report: average_calories_per_user_last_7_days not float: %v", d["average_calories_per_user_last_7_days"])
 		}
+		assertFloatNear(t, "average_calories_per_user_last_7_days", 9550.0/3.0, avg, 0.000001)
+		comparison, ok := d["entries_comparison"].(map[string]any)
+		if !ok {
+			t.Fatalf("FAIL admin_get_report: entries_comparison not object: %v", d["entries_comparison"])
+		}
+		assertEq(t, "comparison.current_week", float64(18), comparison["current_week"])
+		assertEq(t, "comparison.previous_week", float64(8), comparison["previous_week"])
+		assertEq(t, "comparison.difference", float64(10), comparison["difference"])
 	})
 }

@@ -45,6 +45,11 @@ func main() {
 		})
 	}
 
+	// Ensure default limits for users seeded before these columns existed (idempotent)
+	cfg.Db.Model(&user.Users{}).
+		Where("daily_calorie_limit = 0 AND role = ?", user.User).
+		Updates(map[string]interface{}{"daily_calorie_limit": 2100, "monthly_price_limit": 1000})
+
 	// Seed food entries
 	var foodCount int64
 	cfg.Db.Model(&food.FoodEntry{}).Count(&foodCount)

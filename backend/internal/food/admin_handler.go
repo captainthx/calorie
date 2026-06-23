@@ -2,6 +2,7 @@ package food
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -59,6 +60,11 @@ func (h *AdminHandler) Create(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	req.FoodName = strings.TrimSpace(req.FoodName)
+	if req.FoodName == "" {
+		response.Error(c, http.StatusBadRequest, "food_name cannot be empty")
+		return
+	}
 	res, err := h.svc.AdminCreate(req)
 	if err != nil {
 		handleServiceError(c, err)
@@ -78,6 +84,10 @@ func (h *AdminHandler) Update(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	if req.FoodName != nil && strings.TrimSpace(*req.FoodName) == "" {
+		response.Error(c, http.StatusBadRequest, "food_name cannot be empty")
+		return
+	}
 	res, err := h.svc.AdminUpdate(id, req)
 	if err != nil {
 		handleServiceError(c, err)
@@ -95,6 +105,11 @@ func (h *AdminHandler) FullUpdate(c *gin.Context) {
 	var req PutFoodEntryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	req.FoodName = strings.TrimSpace(req.FoodName)
+	if req.FoodName == "" {
+		response.Error(c, http.StatusBadRequest, "food_name cannot be empty")
 		return
 	}
 	patchReq := UpdateFoodEntryRequest{

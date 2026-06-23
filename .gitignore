@@ -16,10 +16,7 @@ vendor/
 .vscode/
 
 # Documents
-backend/Calorie_App_Requirements.md
-backend/Calories-01-02-04-FS.pdf
-backend/DESIGN.md
-backend/Simple_Calorie_App_Thai_Full.docx
+docs/*
 
 
 CLAUDE.md
@@ -30,5 +27,5 @@ skills-lock.json
 graphify-out/
 AGENTS.md
 .codex/config.toml
-backend/internal/food/handler_test.go
-Simple_Calorie_App.postman_collection.json
+backend/api
+backend/test_result.log
