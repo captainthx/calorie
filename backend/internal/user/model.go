@@ -23,11 +23,14 @@ func (r *UserRole) Scan(value interface{}) error {
 		*r = ""
 		return nil
 	}
-	bytes, ok := value.([]byte)
-	if !ok {
+	switch v := value.(type) {
+	case string:
+		*r = UserRole(v)
+	case []byte:
+		*r = UserRole(string(v))
+	default:
 		return errors.New("failed to scan UserRole")
 	}
-	*r = UserRole(string(bytes))
 	return nil
 }
 
@@ -35,7 +38,7 @@ type Users struct {
 	Name               string   `gorm:"type:varchar(100);not null" json:"name"`
 	Role               UserRole `gorm:"type:user_role_enum;default:'USER';not null" json:"role"`
 	Token              string   `gorm:"type:varchar(100);unique" json:"token"`
-	DaylyCalorieLimit  int      `gorm:"type:int;not null" json:"dayly_calorie_limit"`
-	MounthlyPriceLimit int      `gorm:"type:int;not null" json:"mounthly_price_limit"`
+	DailyCalorieLimit  int      `gorm:"type:int;not null" json:"daily_calorie_limit"`
+	MonthlyPriceLimit  int      `gorm:"type:int;not null" json:"monthly_price_limit"`
 	gorm.Model
 }
