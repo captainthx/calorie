@@ -1006,6 +1006,7 @@
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1016,6 +1017,7 @@
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "user_id": {
@@ -1077,6 +1079,7 @@
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1087,6 +1090,7 @@
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 }
             }
@@ -1151,6 +1155,7 @@
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1161,6 +1166,7 @@
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 }
             }
@@ -1190,6 +1196,7 @@
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1200,6 +1207,7 @@
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 }
             }

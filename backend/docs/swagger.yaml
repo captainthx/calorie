@@ -3,6 +3,7 @@ definitions:
   food.AdminCreateFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -10,6 +11,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
       user_id:
@@ -52,6 +54,7 @@ definitions:
   food.CreateFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -59,6 +62,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
     required:
@@ -102,6 +106,7 @@ definitions:
   food.PutFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -109,6 +114,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
     required:
@@ -133,6 +139,7 @@ definitions:
   food.UpdateFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -140,6 +147,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
     type: object

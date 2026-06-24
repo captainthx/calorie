@@ -47,7 +47,10 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("create enum: %v", err))
 	}
 
-	testDB.AutoMigrate(&user.Users{}, &food.FoodEntry{})
+	if err := testDB.AutoMigrate(&user.Users{}, &food.FoodEntry{}); err != nil {
+		panic(fmt.Sprintf("auto migrate: %v", err))
+	}
+	testDB.Exec("TRUNCATE TABLE food_entries RESTART IDENTITY CASCADE")
 	testDB.Model(&user.Users{}).
 		Where("daily_calorie_limit = 0 AND role = ?", user.User).
 		Updates(map[string]interface{}{"daily_calorie_limit": 2100, "monthly_price_limit": 1000})
@@ -61,9 +64,6 @@ func TestMain(m *testing.M) {
 			{Name: "Admin", Role: user.Admin, Token: "admin-token-789"},
 		})
 	}
-
-	testDB.Exec("TRUNCATE TABLE food_entries RESTART IDENTITY CASCADE")
-
 	var john, jane user.Users
 	testDB.Where("token = ?", "user-token-123").First(&john)
 	testDB.Where("token = ?", "user-token-456").First(&jane)
@@ -149,9 +149,9 @@ func TestIntegration(t *testing.T) {
 
 	runAuthChecks(t)
 	runDailySummaryTests(t, state)
+	runAdminReportTests(t)
 	runUserFoodEntryTests(t, state)
 	runAdminFoodEntryTests(t, state)
-	runAdminReportTests(t)
 }
 
 func runAuthChecks(t *testing.T) {
@@ -274,6 +274,16 @@ func runUserFoodEntryTests(t *testing.T, state *integrationState) {
 		}
 		assertEq(t, "calories_zero", float64(0), dataField(w.Body.Bytes())["calories"])
 	})
+	t.Run("create_upper_bounds", func(t *testing.T) {
+		body := fmt.Sprintf(`{"food_name":"Max Meal","calories":10000,"price":10000.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
+		if !checkCode(t, "create_upper_bounds", w, 200) {
+			return
+		}
+		d := dataField(w.Body.Bytes())
+		assertEq(t, "calories", float64(10000), d["calories"])
+		assertEq(t, "price", float64(10000), d["price"])
+	})
 	t.Run("create_empty_food_name_400", func(t *testing.T) {
 		body := fmt.Sprintf(`{"food_name":"  ","calories":100,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
 		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
@@ -281,6 +291,26 @@ func runUserFoodEntryTests(t *testing.T, state *integrationState) {
 			return
 		}
 		assertEq(t, "success", false, decodeBody(w.Body.Bytes())["success"])
+	})
+	t.Run("create_calories_too_high_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"food_name":"Too High Cal","calories":10001,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
+		checkCode(t, "create_calories_too_high", w, 400)
+	})
+	t.Run("create_calories_negative_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"food_name":"Negative Cal","calories":-1,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
+		checkCode(t, "create_calories_negative", w, 400)
+	})
+	t.Run("create_price_too_high_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"food_name":"Too Expensive","calories":100,"price":10001.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
+		checkCode(t, "create_price_too_high", w, 400)
+	})
+	t.Run("create_price_negative_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"food_name":"Negative Price","calories":100,"price":-1.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("POST", "/api/food-entries", "user-token-123", body)
+		checkCode(t, "create_price_negative", w, 400)
 	})
 	t.Run("put_full_update", func(t *testing.T) {
 		if state.userEntryID == 0 {
@@ -321,6 +351,36 @@ func runUserFoodEntryTests(t *testing.T, state *integrationState) {
 			return
 		}
 		assertEq(t, "calories_zero", float64(0), dataField(w.Body.Bytes())["calories"])
+	})
+	t.Run("patch_calories_too_high_400", func(t *testing.T) {
+		if state.userEntryID == 0 {
+			t.Skip("no entry ID")
+		}
+		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", `{"calories":10001}`)
+		checkCode(t, "patch_calories_too_high", w, 400)
+	})
+	t.Run("patch_calories_negative_400", func(t *testing.T) {
+		if state.userEntryID == 0 {
+			t.Skip("no entry ID")
+		}
+		w := apiReq("PATCH", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", `{"calories":-1}`)
+		checkCode(t, "patch_calories_negative", w, 400)
+	})
+	t.Run("put_price_too_high_400", func(t *testing.T) {
+		if state.userEntryID == 0 {
+			t.Skip("no entry ID")
+		}
+		body := fmt.Sprintf(`{"food_name":"Too Expensive Update","calories":100,"price":10001.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("PUT", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", body)
+		checkCode(t, "put_price_too_high", w, 400)
+	})
+	t.Run("put_price_negative_400", func(t *testing.T) {
+		if state.userEntryID == 0 {
+			t.Skip("no entry ID")
+		}
+		body := fmt.Sprintf(`{"food_name":"Negative Price Update","calories":100,"price":-1.0,"entry_date":"%sT12:00:00Z"}`, state.today)
+		w := apiReq("PUT", fmt.Sprintf("/api/food-entries/%d", state.userEntryID), "user-token-123", body)
+		checkCode(t, "put_price_negative", w, 400)
 	})
 	t.Run("patch_jane_john_entry_403", func(t *testing.T) {
 		if state.userEntryID == 0 {
@@ -386,6 +446,16 @@ func runAdminFoodEntryTests(t *testing.T, state *integrationState) {
 			t.Errorf("FAIL admin_create_for_john: no id: %s", w.Body.String())
 		}
 	})
+	t.Run("admin_create_upper_bounds", func(t *testing.T) {
+		body := fmt.Sprintf(`{"user_id":%d,"food_name":"Admin Max Meal","calories":10000,"price":10000.0,"entry_date":"%sT12:00:00Z"}`, johnID, state.today)
+		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
+		if !checkCode(t, "admin_create_upper_bounds", w, 200) {
+			return
+		}
+		d := dataField(w.Body.Bytes())
+		assertEq(t, "calories", float64(10000), d["calories"])
+		assertEq(t, "price", float64(10000), d["price"])
+	})
 	t.Run("admin_create_user_not_found_404", func(t *testing.T) {
 		body := fmt.Sprintf(`{"user_id":9999,"food_name":"Ghost Meal","calories":100,"price":10.0,"entry_date":"%sT12:00:00Z"}`, state.today)
 		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
@@ -393,6 +463,21 @@ func runAdminFoodEntryTests(t *testing.T, state *integrationState) {
 			return
 		}
 		assertEq(t, "success", false, decodeBody(w.Body.Bytes())["success"])
+	})
+	t.Run("admin_create_price_too_high_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"user_id":%d,"food_name":"Admin Too Expensive","calories":100,"price":10001.0,"entry_date":"%sT12:00:00Z"}`, johnID, state.today)
+		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
+		checkCode(t, "admin_create_price_too_high", w, 400)
+	})
+	t.Run("admin_create_calories_negative_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"user_id":%d,"food_name":"Admin Negative Cal","calories":-1,"price":10.0,"entry_date":"%sT12:00:00Z"}`, johnID, state.today)
+		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
+		checkCode(t, "admin_create_calories_negative", w, 400)
+	})
+	t.Run("admin_create_price_negative_400", func(t *testing.T) {
+		body := fmt.Sprintf(`{"user_id":%d,"food_name":"Admin Negative Price","calories":100,"price":-1.0,"entry_date":"%sT12:00:00Z"}`, johnID, state.today)
+		w := apiReq("POST", "/api/admin/food-entries", "admin-token-789", body)
+		checkCode(t, "admin_create_price_negative", w, 400)
 	})
 	t.Run("admin_get_by_id", func(t *testing.T) {
 		if state.adminEntryID == 0 {
@@ -427,6 +512,20 @@ func runAdminFoodEntryTests(t *testing.T, state *integrationState) {
 		}
 		assertEq(t, "food_name", "Patched Name", dataField(w.Body.Bytes())["food_name"])
 	})
+	t.Run("admin_patch_price_too_high_400", func(t *testing.T) {
+		if state.adminEntryID == 0 {
+			t.Skip("no admin entry ID")
+		}
+		w := apiReq("PATCH", fmt.Sprintf("/api/admin/food-entries/%d", state.adminEntryID), "admin-token-789", `{"price":10001}`)
+		checkCode(t, "admin_patch_price_too_high", w, 400)
+	})
+	t.Run("admin_patch_price_negative_400", func(t *testing.T) {
+		if state.adminEntryID == 0 {
+			t.Skip("no admin entry ID")
+		}
+		w := apiReq("PATCH", fmt.Sprintf("/api/admin/food-entries/%d", state.adminEntryID), "admin-token-789", `{"price":-1}`)
+		checkCode(t, "admin_patch_price_negative", w, 400)
+	})
 	t.Run("admin_delete", func(t *testing.T) {
 		if state.adminEntryID == 0 {
 			t.Skip("no admin entry ID")
@@ -446,7 +545,7 @@ func runAdminReportTests(t *testing.T) {
 			return
 		}
 		d := dataField(w.Body.Bytes())
-		assertEq(t, "entries_last_7_days", float64(18), d["entries_last_7_days"])
+		assertEq(t, "entries_last_7_days", float64(17), d["entries_last_7_days"])
 		assertEq(t, "entries_previous_7_days", float64(8), d["entries_previous_7_days"])
 		assertEq(t, "users_count", float64(3), d["users_count"])
 		avg, ok := d["average_calories_per_user_last_7_days"].(float64)
@@ -458,8 +557,8 @@ func runAdminReportTests(t *testing.T) {
 		if !ok {
 			t.Fatalf("FAIL admin_get_report: entries_comparison not object: %v", d["entries_comparison"])
 		}
-		assertEq(t, "comparison.current_week", float64(18), comparison["current_week"])
+		assertEq(t, "comparison.current_week", float64(17), comparison["current_week"])
 		assertEq(t, "comparison.previous_week", float64(8), comparison["previous_week"])
-		assertEq(t, "comparison.difference", float64(10), comparison["difference"])
+		assertEq(t, "comparison.difference", float64(9), comparison["difference"])
 	})
 }

@@ -52,7 +52,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg.Db.AutoMigrate(&user.Users{}, &food.FoodEntry{})
+	if err := cfg.Db.AutoMigrate(&user.Users{}, &food.FoodEntry{}); err != nil {
+		logger.Error("auto migrate failed", "error", err)
+		os.Exit(1)
+	}
 
 	// Seed users
 	var count int64
@@ -82,7 +85,6 @@ func main() {
 
 	gin.SetMode(cfg.Mode)
 	router := gin.New()
-	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), middleware.RequestLogger(logger))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     splitCSV(cfg.CORSAllowedOrigins),
