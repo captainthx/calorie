@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -13,20 +12,20 @@ func loadDb(dbPort string, dbHost string, dbUser string, dbPassword string, dbNa
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Bangkok", dbHost, dbUser, dbPassword, dbName, dbPort)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
 
 	sqlDb, err := db.DB()
 	if err != nil {
-		log.Fatal("Failed to connect to the Database")
-		return nil, err
+		return nil, fmt.Errorf("get database handle: %w", err)
 	}
 
 	err = sqlDb.Ping()
 	if err != nil {
-		log.Fatal("Failed to ping the Database")
-		return nil, err
+		return nil, fmt.Errorf("ping database: %w", err)
 	}
-	fmt.Println("🚀 Connected Successfully to the Database")
-	return db, err
+	return db, nil
 }

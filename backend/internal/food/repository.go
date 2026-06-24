@@ -20,8 +20,6 @@ type Repository interface {
 	AvgCaloriesPerUserInRange(from, to time.Time) (float64, error)
 	CountUsers() (int64, error)
 	SumCaloriesInRange(from, to time.Time) (int64, error)
-	SumCaloriesPerDay(userID uint, from, to time.Time) (map[string]int, error)
-	SumPriceInMonths(userID uint, from, to time.Time) (map[string]float64, error)
 }
 
 type repository struct {
@@ -145,46 +143,4 @@ func (r *repository) SumCaloriesInRange(from, to time.Time) (int64, error) {
 		Where("entry_date >= ? AND entry_date < ?", from, to).
 		Scan(&total).Error
 	return total, err
-}
-
-func (r *repository) SumCaloriesPerDay(userID uint, from, to time.Time) (map[string]int, error) {
-	type row struct {
-		Day   string `gorm:"column:day"`
-		Total int    `gorm:"column:total"`
-	}
-	var rows []row
-	err := r.db.Model(&FoodEntry{}).
-		Select("TO_CHAR(entry_date, 'YYYY-MM-DD') as day, COALESCE(SUM(calories), 0) as total").
-		Where("user_id = ? AND entry_date >= ? AND entry_date < ?", userID, from, to.AddDate(0, 0, 1)).
-		Group("day").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]int, len(rows))
-	for _, row := range rows {
-		result[row.Day] = row.Total
-	}
-	return result, nil
-}
-
-func (r *repository) SumPriceInMonths(userID uint, from, to time.Time) (map[string]float64, error) {
-	type row struct {
-		YearMonth string  `gorm:"column:ym"`
-		Total     float64 `gorm:"column:total"`
-	}
-	var rows []row
-	err := r.db.Model(&FoodEntry{}).
-		Select("TO_CHAR(entry_date, 'YYYY-MM') as ym, COALESCE(SUM(price), 0) as total").
-		Where("user_id = ? AND entry_date >= ? AND entry_date < ?", userID, from, to.AddDate(0, 0, 1)).
-		Group("ym").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]float64, len(rows))
-	for _, row := range rows {
-		result[row.YearMonth] = row.Total
-	}
-	return result, nil
 }

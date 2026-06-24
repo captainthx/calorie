@@ -71,7 +71,6 @@ This API uses predefined bearer tokens, not JWT login.
 - `PATCH /api/food-entries/:id` - partial update current user's entry.
 - `DELETE /api/food-entries/:id` - delete current user's entry.
 - `GET /api/daily-summary` - current user's summary, optional `date=YYYY-MM-DD`.
-- `GET /api/daily-summaries` - current user's summary range, requires `date_from` and `date_to`.
 - `GET /api/admin/food-entries` - admin list all entries.
 - `POST /api/admin/food-entries` - admin create entry for any user.
 - `GET /api/admin/reports` - admin report.

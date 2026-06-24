@@ -2,6 +2,7 @@ package food
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ func (s *FoodService) Create(u *user.Users, req CreateFoodEntryRequest) (*FoodEn
 		EntryDate: req.EntryDate,
 	}
 	if err := s.repo.Create(entry); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create food entry: %w", err)
 	}
 	return toFoodEntryResponse(entry), nil
 }
@@ -42,7 +43,7 @@ func (s *FoodService) Create(u *user.Users, req CreateFoodEntryRequest) (*FoodEn
 func (s *FoodService) List(userID uint, dateFrom, dateTo *time.Time) ([]FoodEntryResponse, error) {
 	entries, err := s.repo.FindByUserID(userID, dateFrom, dateTo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list food entries for user %d: %w", userID, err)
 	}
 	result := make([]FoodEntryResponse, len(entries))
 	for i := range entries {
@@ -54,7 +55,7 @@ func (s *FoodService) List(userID uint, dateFrom, dateTo *time.Time) ([]FoodEntr
 func (s *FoodService) GetByID(id, userID uint) (*FoodEntryResponse, error) {
 	entry, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get food entry %d: %w", id, err)
 	}
 	if entry.UserID != userID {
 		return nil, ErrForbidden
@@ -65,7 +66,7 @@ func (s *FoodService) GetByID(id, userID uint) (*FoodEntryResponse, error) {
 func (s *FoodService) Update(id, userID uint, req UpdateFoodEntryRequest) (*FoodEntryResponse, error) {
 	entry, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get food entry %d for update: %w", id, err)
 	}
 	if entry.UserID != userID {
 		return nil, ErrForbidden
@@ -79,7 +80,7 @@ func (s *FoodService) Update(id, userID uint, req UpdateFoodEntryRequest) (*Food
 	}
 	applyUpdate(entry, req)
 	if err := s.repo.Update(entry); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update food entry %d: %w", id, err)
 	}
 	return toFoodEntryResponse(entry), nil
 }
@@ -87,22 +88,25 @@ func (s *FoodService) Update(id, userID uint, req UpdateFoodEntryRequest) (*Food
 func (s *FoodService) Delete(id, userID uint) error {
 	entry, err := s.repo.FindByID(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("get food entry %d for delete: %w", id, err)
 	}
 	if entry.UserID != userID {
 		return ErrForbidden
 	}
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return fmt.Errorf("delete food entry %d: %w", id, err)
+	}
+	return nil
 }
 
 func (s *FoodService) DailySummary(u *user.Users, date time.Time) (*DailySummaryResponse, error) {
 	totalCal, err := s.repo.SumCaloriesOnDay(u.ID, date)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sum daily calories for user %d on %s: %w", u.ID, date.Format("2006-01-02"), err)
 	}
 	totalPrice, err := s.repo.SumPriceInMonth(u.ID, date.Year(), int(date.Month()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sum monthly price for user %d on %s: %w", u.ID, date.Format("2006-01-02"), err)
 	}
 	return &DailySummaryResponse{
 		Date:            date.Format("2006-01-02"),
@@ -118,7 +122,7 @@ func (s *FoodService) DailySummary(u *user.Users, date time.Time) (*DailySummary
 func (s *FoodService) ListAll(dateFrom, dateTo *time.Time) ([]AdminFoodEntryResponse, error) {
 	entries, err := s.repo.FindAll(dateFrom, dateTo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list admin food entries: %w", err)
 	}
 	result := make([]AdminFoodEntryResponse, len(entries))
 	for i := range entries {
@@ -130,7 +134,7 @@ func (s *FoodService) ListAll(dateFrom, dateTo *time.Time) ([]AdminFoodEntryResp
 func (s *FoodService) AdminGetByID(id uint) (*AdminFoodEntryResponse, error) {
 	entry, err := s.repo.FindByIDWithUser(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get admin food entry %d: %w", id, err)
 	}
 	return toAdminFoodEntryResponse(entry), nil
 }
@@ -144,7 +148,7 @@ func (s *FoodService) AdminCreate(req AdminCreateFoodEntryRequest) (*AdminFoodEn
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("get user %d for admin create: %w", req.UserID, err)
 	}
 	entry := &FoodEntry{
 		UserID:    req.UserID,
@@ -154,11 +158,11 @@ func (s *FoodService) AdminCreate(req AdminCreateFoodEntryRequest) (*AdminFoodEn
 		EntryDate: req.EntryDate,
 	}
 	if err := s.repo.Create(entry); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create admin food entry for user %d: %w", req.UserID, err)
 	}
 	result, err := s.repo.FindByIDWithUser(entry.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load created admin food entry %d: %w", entry.ID, err)
 	}
 	return toAdminFoodEntryResponse(result), nil
 }
@@ -166,7 +170,7 @@ func (s *FoodService) AdminCreate(req AdminCreateFoodEntryRequest) (*AdminFoodEn
 func (s *FoodService) AdminUpdate(id uint, req UpdateFoodEntryRequest) (*AdminFoodEntryResponse, error) {
 	entryWithUser, err := s.repo.FindByIDWithUser(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get admin food entry %d for update: %w", id, err)
 	}
 	if req.FoodName != nil {
 		trimmed := strings.TrimSpace(*req.FoodName)
@@ -177,7 +181,7 @@ func (s *FoodService) AdminUpdate(id uint, req UpdateFoodEntryRequest) (*AdminFo
 	}
 	applyUpdate(&entryWithUser.FoodEntry, req)
 	if err := s.repo.Update(&entryWithUser.FoodEntry); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update admin food entry %d: %w", id, err)
 	}
 	return toAdminFoodEntryResponse(entryWithUser), nil
 }
@@ -185,9 +189,12 @@ func (s *FoodService) AdminUpdate(id uint, req UpdateFoodEntryRequest) (*AdminFo
 func (s *FoodService) AdminDelete(id uint) error {
 	_, err := s.repo.FindByID(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("get admin food entry %d for delete: %w", id, err)
 	}
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return fmt.Errorf("delete admin food entry %d: %w", id, err)
+	}
+	return nil
 }
 
 func (s *FoodService) GetReport() (*ReportResponse, error) {
@@ -200,19 +207,19 @@ func (s *FoodService) GetReport() (*ReportResponse, error) {
 
 	last7, err := s.repo.CountEntriesInRange(last7Start, last7End)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("count entries in last 7 days: %w", err)
 	}
 	prev7, err := s.repo.CountEntriesInRange(prev7Start, prev7End)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("count entries in previous 7 days: %w", err)
 	}
 	totalCalLast7, err := s.repo.SumCaloriesInRange(last7Start, last7End)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sum calories in last 7 days: %w", err)
 	}
 	usersCount, err := s.repo.CountUsers()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("count users for report: %w", err)
 	}
 	var avgCal float64
 	if usersCount > 0 {
@@ -229,34 +236,6 @@ func (s *FoodService) GetReport() (*ReportResponse, error) {
 			Difference:   last7 - prev7,
 		},
 	}, nil
-}
-
-func (s *FoodService) ListDailySummaries(u *user.Users, dateFrom, dateTo time.Time) ([]DailySummaryResponse, error) {
-	calPerDay, err := s.repo.SumCaloriesPerDay(u.ID, dateFrom, dateTo)
-	if err != nil {
-		return nil, err
-	}
-	pricePerMonth, err := s.repo.SumPriceInMonths(u.ID, dateFrom, dateTo)
-	if err != nil {
-		return nil, err
-	}
-	var result []DailySummaryResponse
-	for d := dateFrom; !d.After(dateTo); d = d.AddDate(0, 0, 1) {
-		dayKey := d.Format("2006-01-02")
-		monthKey := d.Format("2006-01")
-		cal := calPerDay[dayKey]
-		price := pricePerMonth[monthKey]
-		result = append(result, DailySummaryResponse{
-			Date:            dayKey,
-			TotalCalories:   cal,
-			TotalPrice:      price,
-			CalorieLimit:    u.DailyCalorieLimit,
-			CalorieExceeded: cal > u.DailyCalorieLimit,
-			PriceLimit:      float64(u.MonthlyPriceLimit),
-			PriceExceeded:   price > float64(u.MonthlyPriceLimit),
-		})
-	}
-	return result, nil
 }
 
 func applyUpdate(entry *FoodEntry, req UpdateFoodEntryRequest) {

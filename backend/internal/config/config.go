@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -30,7 +29,6 @@ func LoadConfig() (*Config, error) {
 
 	db, err := loadDb(dbPort, dbHost, dbUser, dbPassword, dbName)
 	if err != nil {
-		log.Fatal("Failed to connect to the Database")
 		return nil, err
 	}
 

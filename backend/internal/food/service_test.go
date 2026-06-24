@@ -19,29 +19,25 @@ func strPtr(s string) *string     { return &s }
 
 type mockRepo struct {
 	// configurable return values
-	entry         *FoodEntry
-	entries       []FoodEntry
-	allEntries    []FoodEntryWithUser
-	calSum        int
-	priceSum      float64
-	calPerDay     map[string]int
-	pricePerMonth map[string]float64
-	last7Count    int64
-	prev7Count    int64
-	usersCount    int64
-	last7CalSum   int64
-	capturedTo    time.Time
+	entry       *FoodEntry
+	entries     []FoodEntry
+	allEntries  []FoodEntryWithUser
+	calSum      int
+	priceSum    float64
+	last7Count  int64
+	prev7Count  int64
+	usersCount  int64
+	last7CalSum int64
+	capturedTo  time.Time
 
 	// error injection
-	createErr           error
-	updateErr           error
-	deleteErr           error
-	findByUserIDErr     error
-	findAllErr          error
-	sumCalOnDayErr      error
-	sumPriceInMonthErr  error
-	sumCalPerDayErr     error
-	sumPriceInMonthsErr error
+	createErr          error
+	updateErr          error
+	deleteErr          error
+	findByUserIDErr    error
+	findAllErr         error
+	sumCalOnDayErr     error
+	sumPriceInMonthErr error
 
 	// spy: call tracking
 	createCalled          bool
@@ -113,18 +109,6 @@ func (m *mockRepo) AvgCaloriesPerUserInRange(from, to time.Time) (float64, error
 func (m *mockRepo) CountUsers() (int64, error)                                    { return m.usersCount, nil }
 func (m *mockRepo) SumCaloriesInRange(from, to time.Time) (int64, error) {
 	return m.last7CalSum, nil
-}
-func (m *mockRepo) SumCaloriesPerDay(userID uint, from, to time.Time) (map[string]int, error) {
-	if m.calPerDay != nil {
-		return m.calPerDay, m.sumCalPerDayErr
-	}
-	return map[string]int{}, m.sumCalPerDayErr
-}
-func (m *mockRepo) SumPriceInMonths(userID uint, from, to time.Time) (map[string]float64, error) {
-	if m.pricePerMonth != nil {
-		return m.pricePerMonth, m.sumPriceInMonthsErr
-	}
-	return map[string]float64{}, m.sumPriceInMonthsErr
 }
 
 // --- spy mock user repository ---
@@ -265,7 +249,8 @@ func TestCreate_Success(t *testing.T) {
 func TestCreate_PropagatesRepoError(t *testing.T) {
 	u := &user.Users{}
 	u.ID = 1
-	repo := &mockRepo{createErr: errors.New("db error")}
+	repoErr := errors.New("db error")
+	repo := &mockRepo{createErr: repoErr}
 	svc := newTestSvc(repo)
 
 	_, err := svc.Create(u, CreateFoodEntryRequest{
@@ -275,8 +260,8 @@ func TestCreate_PropagatesRepoError(t *testing.T) {
 		EntryDate: time.Now(),
 	})
 
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("Create: got %v, want \"db error\"", err)
+	if !errors.Is(err, repoErr) {
+		t.Errorf("Create: got %v, want wrapped db error", err)
 	}
 }
 
@@ -307,13 +292,14 @@ func TestList(t *testing.T) {
 }
 
 func TestList_PropagatesRepoError(t *testing.T) {
-	repo := &mockRepo{findByUserIDErr: errors.New("db error")}
+	repoErr := errors.New("db error")
+	repo := &mockRepo{findByUserIDErr: repoErr}
 	svc := newTestSvc(repo)
 
 	_, err := svc.List(1, nil, nil)
 
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("List: got %v, want \"db error\"", err)
+	if !errors.Is(err, repoErr) {
+		t.Errorf("List: got %v, want wrapped db error", err)
 	}
 }
 
@@ -398,13 +384,14 @@ func TestUpdate_ForbiddenForWrongUser(t *testing.T) {
 func TestUpdate_PropagatesRepoError(t *testing.T) {
 	entry := &FoodEntry{UserID: 1, FoodName: "Rice"}
 	entry.ID = 10
-	repo := &mockRepo{entry: entry, updateErr: errors.New("db error")}
+	repoErr := errors.New("db error")
+	repo := &mockRepo{entry: entry, updateErr: repoErr}
 	svc := newTestSvc(repo)
 
 	_, err := svc.Update(10, 1, UpdateFoodEntryRequest{FoodName: strPtr("Chicken")})
 
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("Update: got %v, want \"db error\"", err)
+	if !errors.Is(err, repoErr) {
+		t.Errorf("Update: got %v, want wrapped db error", err)
 	}
 }
 
@@ -511,80 +498,28 @@ func TestDailySummaryCalcsAndExceededFlag(t *testing.T) {
 func TestDailySummary_PropagatesCalorieRepoError(t *testing.T) {
 	u := &user.Users{DailyCalorieLimit: 2100, MonthlyPriceLimit: 1000}
 	u.ID = 1
-	repo := &mockRepo{sumCalOnDayErr: errors.New("db error")}
+	repoErr := errors.New("db error")
+	repo := &mockRepo{sumCalOnDayErr: repoErr}
 	svc := newTestSvc(repo)
 
 	_, err := svc.DailySummary(u, time.Now())
 
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("DailySummary: got %v, want \"db error\"", err)
+	if !errors.Is(err, repoErr) {
+		t.Errorf("DailySummary: got %v, want wrapped db error", err)
 	}
 }
 
 func TestDailySummary_PropagatesPriceRepoError(t *testing.T) {
 	u := &user.Users{DailyCalorieLimit: 2100, MonthlyPriceLimit: 1000}
 	u.ID = 1
-	repo := &mockRepo{sumPriceInMonthErr: errors.New("db error")}
+	repoErr := errors.New("db error")
+	repo := &mockRepo{sumPriceInMonthErr: repoErr}
 	svc := newTestSvc(repo)
 
 	_, err := svc.DailySummary(u, time.Now())
 
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("DailySummary: got %v, want \"db error\"", err)
-	}
-}
-
-// --- Test: ListDailySummaries ---
-
-func TestListDailySummaries(t *testing.T) {
-	u := &user.Users{DailyCalorieLimit: 2000, MonthlyPriceLimit: 500}
-	u.ID = 1
-	from := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
-	to := time.Date(2024, 6, 3, 0, 0, 0, 0, time.UTC)
-
-	repo := &mockRepo{
-		calPerDay: map[string]int{
-			"2024-06-01": 1800,
-			"2024-06-02": 2100, // exceeds 2000 limit
-			"2024-06-03": 0,
-		},
-		pricePerMonth: map[string]float64{
-			"2024-06": 600, // exceeds 500 limit
-		},
-	}
-	svc := newTestSvc(repo)
-
-	result, err := svc.ListDailySummaries(u, from, to)
-
-	if err != nil {
-		t.Fatalf("ListDailySummaries: unexpected error %v", err)
-	}
-	if len(result) != 3 {
-		t.Fatalf("ListDailySummaries: got %d days, want 3", len(result))
-	}
-
-	// day 1: under calorie limit, over price limit
-	if result[0].Date != "2024-06-01" {
-		t.Errorf("result[0].Date = %q, want \"2024-06-01\"", result[0].Date)
-	}
-	if result[0].TotalCalories != 1800 {
-		t.Errorf("result[0].TotalCalories = %d, want 1800", result[0].TotalCalories)
-	}
-	if result[0].CalorieExceeded {
-		t.Error("result[0].CalorieExceeded should be false (1800 < 2000)")
-	}
-	if !result[0].PriceExceeded {
-		t.Error("result[0].PriceExceeded should be true (600 > 500)")
-	}
-
-	// day 2: over calorie limit
-	if !result[1].CalorieExceeded {
-		t.Error("result[1].CalorieExceeded should be true (2100 > 2000)")
-	}
-
-	// day 3: zero calories, must still appear in result
-	if result[2].TotalCalories != 0 {
-		t.Errorf("result[2].TotalCalories = %d, want 0", result[2].TotalCalories)
+	if !errors.Is(err, repoErr) {
+		t.Errorf("DailySummary: got %v, want wrapped db error", err)
 	}
 }
 
@@ -612,28 +547,14 @@ func TestListAll(t *testing.T) {
 }
 
 func TestListAll_PropagatesRepoError(t *testing.T) {
-	repo := &mockRepo{findAllErr: errors.New("db error")}
+	repoErr := errors.New("db error")
+	repo := &mockRepo{findAllErr: repoErr}
 	svc := newTestSvc(repo)
 
 	_, err := svc.ListAll(nil, nil)
 
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("ListAll: got %v, want \"db error\"", err)
-	}
-}
-
-func TestListDailySummaries_PropagatesRepoError(t *testing.T) {
-	u := &user.Users{DailyCalorieLimit: 2000, MonthlyPriceLimit: 500}
-	u.ID = 1
-	from := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
-	to := time.Date(2024, 6, 2, 0, 0, 0, 0, time.UTC)
-	repo := &mockRepo{sumCalPerDayErr: errors.New("db error")}
-	svc := newTestSvc(repo)
-
-	_, err := svc.ListDailySummaries(u, from, to)
-
-	if err == nil || err.Error() != "db error" {
-		t.Errorf("ListDailySummaries: got %v, want \"db error\"", err)
+	if !errors.Is(err, repoErr) {
+		t.Errorf("ListAll: got %v, want wrapped db error", err)
 	}
 }
 

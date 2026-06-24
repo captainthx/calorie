@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -32,12 +31,18 @@ import (
 // @in header
 // @name Authorization
 func main() {
-	initTimezone()
+	logger := newLogger(os.Getenv("MODE"))
+	if err := initTimezone(); err != nil {
+		logger.Error("load timezone failed", "error", err)
+		os.Exit(1)
+	}
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("error in loading config: ", err)
+		logger.Error("load config failed", "error", err)
+		os.Exit(1)
 	}
-	logger := newLogger(cfg.Mode)
+	logger = newLogger(cfg.Mode)
+	logger.Info("database connected")
 
 	createUserRoleEnumQuery :=
 		`DO $$ BEGIN
@@ -47,7 +52,8 @@ func main() {
 	END $$`
 
 	if err := cfg.Db.Exec(createUserRoleEnumQuery).Error; err != nil {
-		panic(fmt.Sprintf("Failed to create enum type: %v", err))
+		logger.Error("create user role enum failed", "error", err)
+		os.Exit(1)
 	}
 
 	cfg.Db.AutoMigrate(&user.Users{}, &food.FoodEntry{})
@@ -79,7 +85,15 @@ func main() {
 	}
 
 	gin.SetMode(cfg.Mode)
+	if cfg.Mode == gin.DebugMode {
+		gin.DebugPrintRouteFunc = func(string, string, string, int) {}
+		gin.DebugPrintFunc = func(string, ...any) {}
+	}
 	router := gin.New()
+	if err := router.SetTrustedProxies(nil); err != nil {
+		logger.Error("set trusted proxies failed", "error", err)
+		os.Exit(1)
+	}
 	router.Use(gin.Recovery(), middleware.RequestLogger(logger))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     splitCSV(cfg.CORSAllowedOrigins),
@@ -95,7 +109,14 @@ func main() {
 	router.GET("/docs", func(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
 	})
-	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+	router.GET("/docs/*any", func(c *gin.Context) {
+		if c.Param("any") == "/" {
+			c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
+			return
+		}
+		swaggerHandler(c)
+	})
 
 	userRepo := user.NewUsersRepository(cfg.Db)
 
@@ -106,7 +127,14 @@ func main() {
 	routes.RegisterAdminRoutes(admin, cfg.Db)
 
 	logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
-	router.Run(":" + cfg.Port)
+	server := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+	if err := server.ListenAndServe(); err != nil {
+		logger.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
 }
 
 func seedFoodEntries(db *gorm.DB, johnID, janeID uint) {
@@ -152,12 +180,13 @@ func ago(n, hour int) time.Time {
 	return d.AddDate(0, 0, -n)
 }
 
-func initTimezone() {
+func initTimezone() error {
 	ict, err := time.LoadLocation("Asia/Bangkok")
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("load timezone Asia/Bangkok: %w", err)
 	}
 	time.Local = ict
+	return nil
 }
 
 func splitCSV(s string) []string {

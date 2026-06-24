@@ -216,26 +216,10 @@ func runDailySummaryTests(t *testing.T, state *integrationState) {
 		}
 		assertEq(t, "success", false, decodeBody(w.Body.Bytes())["success"])
 	})
-	t.Run("daily_summaries_range_7days", func(t *testing.T) {
+	t.Run("daily_summaries_removed_404", func(t *testing.T) {
 		from := ago(6, 0).Format("2006-01-02")
 		w := apiReq("GET", "/api/daily-summaries?date_from="+from+"&date_to="+state.today, "user-token-123", "")
-		if !checkCode(t, "daily_summaries_range", w, 200) {
-			return
-		}
-		m := decodeBody(w.Body.Bytes())
-		assertEq(t, "success", true, m["success"])
-		arr, _ := m["data"].([]any)
-		if len(arr) != 7 {
-			t.Errorf("FAIL daily_summaries_range: expected 7 items, got %d (body=%s)", len(arr), w.Body.String())
-		}
-	})
-	t.Run("daily_summaries_missing_date_from_400", func(t *testing.T) {
-		w := apiReq("GET", "/api/daily-summaries?date_to="+state.today, "user-token-123", "")
-		checkCode(t, "daily_summaries_missing_date_from", w, 400)
-	})
-	t.Run("daily_summaries_date_from_after_date_to_400", func(t *testing.T) {
-		w := apiReq("GET", "/api/daily-summaries?date_from="+state.today+"&date_to="+state.yesterday, "user-token-123", "")
-		checkCode(t, "daily_summaries_date_from_after_date_to", w, 400)
+		checkCode(t, "daily_summaries_removed", w, 404)
 	})
 }
 
