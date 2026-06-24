@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Port string
-	Mode string
-	Db   *gorm.DB
+	Port               string
+	Mode               string
+	CORSAllowedOrigins string
+	Db                 *gorm.DB
 }
 
 func LoadConfig() (*Config, error) {
@@ -20,6 +21,7 @@ func LoadConfig() (*Config, error) {
 	}
 	mode := getEnvKey("MODE", "debug")
 	port := getEnvKey("PORT", "8080")
+	corsAllowedOrigins := getEnvKey("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
 	dbHost := getEnvKey("DB_HOST", "localhost")
 	dbPort := getEnvKey("DB_PORT", "5432")
 	dbUser := getEnvKey("DB_USERNAME", "myuser")
@@ -33,9 +35,10 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		Port: port,
-		Mode: mode,
-		Db:   db,
+		Port:               port,
+		Mode:               mode,
+		CORSAllowedOrigins: corsAllowedOrigins,
+		Db:                 db,
 	}, nil
 }
 
