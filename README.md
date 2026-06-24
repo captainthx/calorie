@@ -41,6 +41,7 @@ Default local values match `backend/compose.yml`.
 ```bash
 MODE=debug
 PORT=8080
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=myuser
@@ -49,6 +50,8 @@ DB_NAME=mydatabase
 ```
 
 `.env` is optional when environment variables are supplied directly, which is useful for Docker and CI.
+
+`CORS_ALLOWED_ORIGINS` is a comma-separated allowlist for browser frontends. For local development the defaults cover common frontend ports `3000` and `5173`.
 
 ## Auth Tokens
 
@@ -136,4 +139,3 @@ Use a small trunk-based flow until the project needs release branches.
 - Open PRs into `main`; merge only after CI passes.
 - Use protected `main` when the repo moves to shared team work.
 - Add `release/<version>` branches only when production hotfixes need to diverge from active feature work.
-
