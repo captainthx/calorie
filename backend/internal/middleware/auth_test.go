@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,23 @@ import (
 	"github.com/captainthx/calorie/backend/internal/middleware"
 	"github.com/captainthx/calorie/backend/internal/user"
 )
+
+type stubUserRepo struct {
+	user *user.Users
+	err  error
+}
+
+func (s *stubUserRepo) GetUserByToken(token string) (*user.Users, error) { return s.user, s.err }
+func (s *stubUserRepo) GetUserByID(id uint) (*user.Users, error)         { return nil, nil }
+
+func decodeJSONBody(t *testing.T, body *httptest.ResponseRecorder) map[string]any {
+	t.Helper()
+	var payload map[string]any
+	if err := json.Unmarshal(body.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	return payload
+}
 
 func TestCORSMiddlewareAllowsConfiguredOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -72,6 +90,31 @@ func TestCORSMiddlewareHandlesPreflight(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareMissingHeaderUsesErrorContract(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(middleware.AuthMiddleware(&stubUserRepo{}))
+	router.GET("/protected", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("want 401, got %d", w.Code)
+	}
+	payload := decodeJSONBody(t, w)
+	if payload["success"] != false {
+		t.Errorf("want success=false, got %v", payload["success"])
+	}
+	if payload["error"] != "missing authorization header" {
+		t.Errorf("want error=%q, got %v", "missing authorization header", payload["error"])
+	}
+}
+
 func TestAdminMiddlewareBlocksRegularUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -82,6 +125,13 @@ func TestAdminMiddlewareBlocksRegularUser(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Errorf("want 403, got %d", w.Code)
+	}
+	payload := decodeJSONBody(t, w)
+	if payload["success"] != false {
+		t.Errorf("want success=false, got %v", payload["success"])
+	}
+	if payload["error"] != "forbidden" {
+		t.Errorf("want error=%q, got %v", "forbidden", payload["error"])
 	}
 }
 

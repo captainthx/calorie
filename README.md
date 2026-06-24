@@ -64,6 +64,7 @@ This API uses predefined bearer tokens, not JWT login.
 ## Common API Routes
 
 - `GET /ping` - basic app ping.
+- `GET /docs` - interactive Swagger UI.
 - `GET /api/food-entries` - list current user's entries, optional `date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`.
 - `POST /api/food-entries` - create current user's entry.
 - `PUT /api/food-entries/:id` - full update current user's entry.
@@ -74,6 +75,39 @@ This API uses predefined bearer tokens, not JWT login.
 - `GET /api/admin/food-entries` - admin list all entries.
 - `POST /api/admin/food-entries` - admin create entry for any user.
 - `GET /api/admin/reports` - admin report.
+
+## Response Contract
+
+Successful responses use one shape:
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+Error responses use one shape:
+
+```json
+{
+  "success": false,
+  "error": "forbidden"
+}
+```
+
+Internal failures intentionally return the generic message `internal server error` while the real error is kept in server logs.
+
+## Swagger
+
+Swagger UI is available at `http://localhost:8080/docs` and redirects to the generated Swagger UI page.
+
+Regenerate the docs after changing handler annotations:
+
+```bash
+cd backend
+$(go env GOPATH)/bin/swag init -g ./cmd/api/main.go -o ./docs
+```
 
 ## Tests
 
@@ -93,6 +127,14 @@ go test -tags integration -v ./cmd/api/... -timeout 60s
 ```
 
 The integration tests truncate and reseed `food_entries`, then hit the real Gin router and PostgreSQL through `httptest`.
+
+## Logging
+
+HTTP requests are logged with structured `slog` output.
+
+- `debug` and `test` modes use text logs.
+- `release` mode uses JSON logs.
+- Each request log includes method, path, status, latency, client IP, and user metadata when available.
 
 ## Docker
 

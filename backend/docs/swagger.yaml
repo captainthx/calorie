@@ -1,0 +1,824 @@
+basePath: /
+definitions:
+  food.AdminCreateFoodEntryRequest:
+    properties:
+      calories:
+        minimum: 0
+        type: integer
+      entry_date:
+        type: string
+      food_name:
+        type: string
+      price:
+        minimum: 0
+        type: number
+      user_id:
+        type: integer
+    required:
+    - calories
+    - entry_date
+    - food_name
+    - price
+    - user_id
+    type: object
+  food.AdminFoodEntryResponse:
+    properties:
+      calories:
+        type: integer
+      created_at:
+        type: string
+      entry_date:
+        type: string
+      food_name:
+        type: string
+      id:
+        type: integer
+      price:
+        type: number
+      user_id:
+        type: integer
+      user_name:
+        type: string
+    type: object
+  food.ComparisonData:
+    properties:
+      current_week:
+        type: integer
+      difference:
+        type: integer
+      previous_week:
+        type: integer
+    type: object
+  food.CreateFoodEntryRequest:
+    properties:
+      calories:
+        minimum: 0
+        type: integer
+      entry_date:
+        type: string
+      food_name:
+        type: string
+      price:
+        minimum: 0
+        type: number
+    required:
+    - calories
+    - entry_date
+    - food_name
+    - price
+    type: object
+  food.DailySummaryResponse:
+    properties:
+      calorie_exceeded:
+        type: boolean
+      calorie_limit:
+        type: integer
+      date:
+        type: string
+      price_exceeded:
+        type: boolean
+      price_limit:
+        type: number
+      total_calories:
+        type: integer
+      total_price:
+        type: number
+    type: object
+  food.FoodEntryResponse:
+    properties:
+      calories:
+        type: integer
+      created_at:
+        type: string
+      entry_date:
+        type: string
+      food_name:
+        type: string
+      id:
+        type: integer
+      price:
+        type: number
+    type: object
+  food.PutFoodEntryRequest:
+    properties:
+      calories:
+        minimum: 0
+        type: integer
+      entry_date:
+        type: string
+      food_name:
+        type: string
+      price:
+        minimum: 0
+        type: number
+    required:
+    - calories
+    - entry_date
+    - food_name
+    - price
+    type: object
+  food.ReportResponse:
+    properties:
+      average_calories_per_user_last_7_days:
+        type: number
+      entries_comparison:
+        $ref: '#/definitions/food.ComparisonData'
+      entries_last_7_days:
+        type: integer
+      entries_previous_7_days:
+        type: integer
+      users_count:
+        type: integer
+    type: object
+  food.UpdateFoodEntryRequest:
+    properties:
+      calories:
+        minimum: 0
+        type: integer
+      entry_date:
+        type: string
+      food_name:
+        type: string
+      price:
+        minimum: 0
+        type: number
+    type: object
+  response.ErrorBody:
+    properties:
+      error:
+        example: forbidden
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  response.MessageData:
+    properties:
+      message:
+        example: Entry deleted successfully
+        type: string
+    type: object
+  response.SuccessBody:
+    properties:
+      data: {}
+      success:
+        example: true
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: API for food entries, daily summaries, monthly price limits, and admin
+    reports.
+  title: Simple Calorie App API
+  version: "1.0"
+paths:
+  /api/admin/food-entries:
+    get:
+      description: List all food entries across users for admin.
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/food.AdminFoodEntryResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List all food entries
+      tags:
+      - Admin Food Entries
+    post:
+      consumes:
+      - application/json
+      description: Create a food entry for any user as admin.
+      parameters:
+      - description: Admin create payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/food.AdminCreateFoodEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.AdminFoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create food entry for user
+      tags:
+      - Admin Food Entries
+  /api/admin/food-entries/{id}:
+    delete:
+      description: Delete any food entry as admin.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.MessageData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Delete food entry for admin
+      tags:
+      - Admin Food Entries
+    get:
+      description: Get a food entry by ID for admin.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.AdminFoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get food entry by ID
+      tags:
+      - Admin Food Entries
+    patch:
+      consumes:
+      - application/json
+      description: Partially update any food entry as admin.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Partial update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/food.UpdateFoodEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.AdminFoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update food entry for admin
+      tags:
+      - Admin Food Entries
+    put:
+      consumes:
+      - application/json
+      description: Fully replace any food entry as admin.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Full update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/food.PutFoodEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.AdminFoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Replace food entry for admin
+      tags:
+      - Admin Food Entries
+  /api/admin/reports:
+    get:
+      description: Get aggregate admin report across recent food entries.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.ReportResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get admin report
+      tags:
+      - Admin Reports
+  /api/daily-summaries:
+    get:
+      description: Get daily summaries for each day in the requested range for the
+        authenticated user.
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/food.DailySummaryResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get daily summary range
+      tags:
+      - Summaries
+  /api/daily-summary:
+    get:
+      description: Get the authenticated user's daily calorie summary and monthly
+        price total.
+      parameters:
+      - description: Date (YYYY-MM-DD)
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.DailySummaryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get daily summary
+      tags:
+      - Summaries
+  /api/food-entries:
+    get:
+      description: List food entries for the authenticated user, optionally filtered
+        by date range.
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/food.FoodEntryResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List food entries
+      tags:
+      - Food Entries
+    post:
+      consumes:
+      - application/json
+      description: Create a food entry for the authenticated user.
+      parameters:
+      - description: Food entry payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/food.CreateFoodEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.FoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create food entry
+      tags:
+      - Food Entries
+  /api/food-entries/{id}:
+    delete:
+      description: Delete a food entry owned by the authenticated user.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.MessageData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Delete food entry
+      tags:
+      - Food Entries
+    patch:
+      consumes:
+      - application/json
+      description: Partially update a food entry owned by the authenticated user.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Partial update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/food.UpdateFoodEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.FoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update food entry
+      tags:
+      - Food Entries
+    put:
+      consumes:
+      - application/json
+      description: Fully replace a food entry owned by the authenticated user.
+      parameters:
+      - description: Food entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Full update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/food.PutFoodEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/food.FoodEntryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Replace food entry
+      tags:
+      - Food Entries
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -11,17 +14,30 @@ import (
 	"github.com/captainthx/calorie/backend/internal/middleware"
 	routes "github.com/captainthx/calorie/backend/internal/routers"
 	"github.com/captainthx/calorie/backend/internal/user"
+	"github.com/captainthx/calorie/backend/pkg/response"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
+
+	_ "github.com/captainthx/calorie/backend/docs"
 )
 
+// @title Simple Calorie App API
+// @version 1.0
+// @description API for food entries, daily summaries, monthly price limits, and admin reports.
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	initTimezone()
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("error in loading config: ", err)
 	}
+	logger := newLogger(cfg.Mode)
 
 	createUserRoleEnumQuery :=
 		`DO $$ BEGIN
@@ -63,7 +79,8 @@ func main() {
 	}
 
 	gin.SetMode(cfg.Mode)
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery(), middleware.RequestLogger(logger))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     splitCSV(cfg.CORSAllowedOrigins),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -73,8 +90,12 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
+		response.Success(c, response.MessageData{Message: "pong"})
 	})
+	router.GET("/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
+	})
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	userRepo := user.NewUsersRepository(cfg.Db)
 
@@ -84,6 +105,7 @@ func main() {
 	routes.RegisterRoutes(api, cfg.Db)
 	routes.RegisterAdminRoutes(admin, cfg.Db)
 
+	logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
 	router.Run(":" + cfg.Port)
 }
 
@@ -152,4 +174,17 @@ func splitCSV(s string) []string {
 		}
 	}
 	return result
+}
+
+func newLogger(mode string) *slog.Logger {
+	level := slog.LevelInfo
+	if mode == gin.DebugMode || mode == "test" {
+		level = slog.LevelDebug
+	}
+
+	opts := &slog.HandlerOptions{Level: level}
+	if mode == gin.ReleaseMode {
+		return slog.New(slog.NewJSONHandler(os.Stdout, opts))
+	}
+	return slog.New(slog.NewTextHandler(os.Stdout, opts))
 }
