@@ -29,3 +29,6 @@ AGENTS.md
 .codex/config.toml
 backend/api
 backend/test_result.log
+
+# Worktrees
+.worktrees/
