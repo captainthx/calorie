@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -19,7 +18,7 @@ func LoadConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
-	mode := getEnvKey("MODE", "debug")
+	mode := getEnvKey("GIN_MODE", "debug")
 	port := getEnvKey("PORT", "8080")
 	corsAllowedOrigins := getEnvKey("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
 	dbHost := getEnvKey("DB_HOST", "localhost")
@@ -30,7 +29,6 @@ func LoadConfig() (*Config, error) {
 
 	db, err := loadDb(dbPort, dbHost, dbUser, dbPassword, dbName)
 	if err != nil {
-		log.Fatal("Failed to connect to the Database")
 		return nil, err
 	}
 

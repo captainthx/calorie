@@ -18,7 +18,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=build /out/api /app/api
 
-ENV MODE=release
+ENV GIN_MODE=release
 ENV PORT=8080
 
 EXPOSE 8080

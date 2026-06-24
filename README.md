@@ -39,7 +39,7 @@ The API listens on `http://localhost:8080` by default.
 Default local values match `backend/compose.yml`.
 
 ```bash
-MODE=debug
+GIN_MODE=debug
 PORT=8080
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 DB_HOST=localhost
@@ -71,7 +71,6 @@ This API uses predefined bearer tokens, not JWT login.
 - `PATCH /api/food-entries/:id` - partial update current user's entry.
 - `DELETE /api/food-entries/:id` - delete current user's entry.
 - `GET /api/daily-summary` - current user's summary, optional `date=YYYY-MM-DD`.
-- `GET /api/daily-summaries` - current user's summary range, requires `date_from` and `date_to`.
 - `GET /api/admin/food-entries` - admin list all entries.
 - `POST /api/admin/food-entries` - admin create entry for any user.
 - `GET /api/admin/reports` - admin report.
@@ -149,7 +148,7 @@ Run against the local Compose database from macOS/Windows:
 
 ```bash
 docker run --rm -p 8080:8080 \
-  -e MODE=release \
+  -e GIN_MODE=debug \
   -e PORT=8080 \
   -e DB_HOST=host.docker.internal \
   -e DB_PORT=5432 \

@@ -549,80 +549,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/daily-summaries": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get daily summaries for each day in the requested range for the authenticated user.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Summaries"
-                ],
-                "summary": "Get daily summary range",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Start date (YYYY-MM-DD)",
-                        "name": "date_from",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "End date (YYYY-MM-DD)",
-                        "name": "date_to",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.SuccessBody"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/food.DailySummaryResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorBody"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorBody"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorBody"
-                        }
-                    }
-                }
-            }
-        },
         "/api/daily-summary": {
             "get": {
                 "security": [
@@ -1087,6 +1013,7 @@ const docTemplate = `{
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1097,6 +1024,7 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "user_id": {
@@ -1158,6 +1086,7 @@ const docTemplate = `{
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1168,6 +1097,7 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 }
             }
@@ -1232,6 +1162,7 @@ const docTemplate = `{
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1242,6 +1173,7 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 }
             }
@@ -1271,6 +1203,7 @@ const docTemplate = `{
             "properties": {
                 "calories": {
                     "type": "integer",
+                    "maximum": 10000,
                     "minimum": 0
                 },
                 "entry_date": {
@@ -1281,6 +1214,7 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 10000,
                     "minimum": 0
                 }
             }

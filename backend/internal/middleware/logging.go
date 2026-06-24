@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"log/slog"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/captainthx/calorie/backend/internal/user"
@@ -13,31 +15,62 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 		start := time.Now()
 		c.Next()
 
+		status := c.Writer.Status()
+		rawPath := c.Request.URL.Path
 		path := c.FullPath()
 		if path == "" {
-			path = c.Request.URL.Path
+			path = rawPath
+		}
+		if shouldSkipRequestLog(c.Request.Method, rawPath) || status < http.StatusBadRequest {
+			return
 		}
 
+		msg := "request rejected"
 		attrs := []any{
 			"method", c.Request.Method,
 			"path", path,
-			"status", c.Writer.Status(),
-			"latency_ms", time.Since(start).Milliseconds(),
-			"client_ip", c.ClientIP(),
+			"status", status,
+			"duration", requestDuration(time.Since(start)),
+		}
+		if requestID := c.GetHeader("X-Request-ID"); requestID != "" {
+			attrs = append(attrs, "request_id", requestID)
 		}
 
 		if userData, exists := c.Get("user"); exists {
 			if u, ok := userData.(*user.Users); ok {
-				attrs = append(attrs, "user_id", u.ID, "user_role", u.Role)
+				attrs = append(attrs, "user_id", u.ID)
 			}
 		}
 
-		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			attrs = append(attrs, "errors", c.Errors.String())
-			logger.Error("request completed", attrs...)
+		if status >= http.StatusInternalServerError {
+			msg = "request failed"
+			if ip := c.ClientIP(); ip != "" {
+				attrs = append(attrs, "ip", ip)
+			}
+			if lastErr := c.Errors.Last(); lastErr != nil {
+				attrs = append(attrs, "error", lastErr.Error())
+			}
+			logger.Error(msg, attrs...)
 			return
 		}
 
-		logger.Info("request completed", attrs...)
+		logger.Warn(msg, attrs...)
 	}
+}
+
+func shouldSkipRequestLog(method, path string) bool {
+	if method == http.MethodOptions {
+		return true
+	}
+	if path == "/ping" {
+		return true
+	}
+	return path == "/docs" || strings.HasPrefix(path, "/docs/")
+}
+
+func requestDuration(d time.Duration) string {
+	if d >= time.Millisecond {
+		return d.Truncate(time.Millisecond).String()
+	}
+	return d.Truncate(time.Microsecond).String()
 }

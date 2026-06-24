@@ -3,6 +3,7 @@ definitions:
   food.AdminCreateFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -10,6 +11,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
       user_id:
@@ -52,6 +54,7 @@ definitions:
   food.CreateFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -59,6 +62,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
     required:
@@ -102,6 +106,7 @@ definitions:
   food.PutFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -109,6 +114,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
     required:
@@ -133,6 +139,7 @@ definitions:
   food.UpdateFoodEntryRequest:
     properties:
       calories:
+        maximum: 10000
         minimum: 0
         type: integer
       entry_date:
@@ -140,6 +147,7 @@ definitions:
       food_name:
         type: string
       price:
+        maximum: 10000
         minimum: 0
         type: number
     type: object
@@ -496,52 +504,6 @@ paths:
       summary: Get admin report
       tags:
       - Admin Reports
-  /api/daily-summaries:
-    get:
-      description: Get daily summaries for each day in the requested range for the
-        authenticated user.
-      parameters:
-      - description: Start date (YYYY-MM-DD)
-        in: query
-        name: date_from
-        required: true
-        type: string
-      - description: End date (YYYY-MM-DD)
-        in: query
-        name: date_to
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.SuccessBody'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/food.DailySummaryResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-      security:
-      - BearerAuth: []
-      summary: Get daily summary range
-      tags:
-      - Summaries
   /api/daily-summary:
     get:
       description: Get the authenticated user's daily calorie summary and monthly

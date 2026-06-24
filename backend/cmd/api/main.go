@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -34,10 +32,13 @@ import (
 func main() {
 	initTimezone()
 	cfg, err := config.LoadConfig()
+	logger := newLogger(os.Getenv("GIN_MODE"))
 	if err != nil {
-		log.Fatal("error in loading config: ", err)
+		logger.Error("load config failed", "error", err)
+		os.Exit(1)
 	}
-	logger := newLogger(cfg.Mode)
+	logger = newLogger(cfg.Mode)
+	logger.Info("database connected")
 
 	createUserRoleEnumQuery :=
 		`DO $$ BEGIN
@@ -47,10 +48,14 @@ func main() {
 	END $$`
 
 	if err := cfg.Db.Exec(createUserRoleEnumQuery).Error; err != nil {
-		panic(fmt.Sprintf("Failed to create enum type: %v", err))
+		logger.Error("create user role enum failed", "error", err)
+		os.Exit(1)
 	}
 
-	cfg.Db.AutoMigrate(&user.Users{}, &food.FoodEntry{})
+	if err := cfg.Db.AutoMigrate(&user.Users{}, &food.FoodEntry{}); err != nil {
+		logger.Error("auto migrate failed", "error", err)
+		os.Exit(1)
+	}
 
 	// Seed users
 	var count int64
@@ -95,7 +100,14 @@ func main() {
 	router.GET("/docs", func(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
 	})
-	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+	router.GET("/docs/*any", func(c *gin.Context) {
+		if c.Param("any") == "/" {
+			c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
+			return
+		}
+		swaggerHandler(c)
+	})
 
 	userRepo := user.NewUsersRepository(cfg.Db)
 
@@ -106,7 +118,10 @@ func main() {
 	routes.RegisterAdminRoutes(admin, cfg.Db)
 
 	logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
-	router.Run(":" + cfg.Port)
+	if err := router.Run(":" + cfg.Port); err != nil {
+		logger.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
 }
 
 func seedFoodEntries(db *gorm.DB, johnID, janeID uint) {

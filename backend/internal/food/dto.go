@@ -4,30 +4,30 @@ import "time"
 
 type CreateFoodEntryRequest struct {
 	FoodName  string    `json:"food_name"  binding:"required"`
-	Calories  *int      `json:"calories"   binding:"required,gte=0"`
-	Price     *float64  `json:"price"      binding:"required,gte=0"`
+	Calories  *int      `json:"calories"   binding:"required,gte=0,lte=10000"`
+	Price     *float64  `json:"price"      binding:"required,gte=0,lte=10000"`
 	EntryDate time.Time `json:"entry_date" binding:"required"`
 }
 
 type AdminCreateFoodEntryRequest struct {
 	UserID    uint      `json:"user_id"    binding:"required"`
 	FoodName  string    `json:"food_name"  binding:"required"`
-	Calories  *int      `json:"calories"   binding:"required,gte=0"`
-	Price     *float64  `json:"price"      binding:"required,gte=0"`
+	Calories  *int      `json:"calories"   binding:"required,gte=0,lte=10000"`
+	Price     *float64  `json:"price"      binding:"required,gte=0,lte=10000"`
 	EntryDate time.Time `json:"entry_date" binding:"required"`
 }
 
 type UpdateFoodEntryRequest struct {
 	FoodName  *string    `json:"food_name"`
-	Calories  *int       `json:"calories"   binding:"omitempty,gte=0"`
-	Price     *float64   `json:"price"      binding:"omitempty,gte=0"`
+	Calories  *int       `json:"calories"   binding:"omitempty,gte=0,lte=10000"`
+	Price     *float64   `json:"price"      binding:"omitempty,gte=0,lte=10000"`
 	EntryDate *time.Time `json:"entry_date"`
 }
 
 type PutFoodEntryRequest struct {
 	FoodName  string    `json:"food_name"  binding:"required"`
-	Calories  *int      `json:"calories"   binding:"required,gte=0"`
-	Price     *float64  `json:"price"      binding:"required,gte=0"`
+	Calories  *int      `json:"calories"   binding:"required,gte=0,lte=10000"`
+	Price     *float64  `json:"price"      binding:"required,gte=0,lte=10000"`
 	EntryDate time.Time `json:"entry_date" binding:"required"`
 }
 
