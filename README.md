@@ -39,7 +39,7 @@ The API listens on `http://localhost:8080` by default.
 Default local values match `backend/compose.yml`.
 
 ```bash
-MODE=debug
+GIN_MODE=debug
 PORT=8080
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 DB_HOST=localhost
@@ -148,7 +148,7 @@ Run against the local Compose database from macOS/Windows:
 
 ```bash
 docker run --rm -p 8080:8080 \
-  -e MODE=release \
+  -e GIN_MODE=debug \
   -e PORT=8080 \
   -e DB_HOST=host.docker.internal \
   -e DB_PORT=5432 \

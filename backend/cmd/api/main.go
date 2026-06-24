@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -31,12 +30,9 @@ import (
 // @in header
 // @name Authorization
 func main() {
-	logger := newLogger(os.Getenv("MODE"))
-	if err := initTimezone(); err != nil {
-		logger.Error("load timezone failed", "error", err)
-		os.Exit(1)
-	}
+	initTimezone()
 	cfg, err := config.LoadConfig()
+	logger := newLogger(os.Getenv("GIN_MODE"))
 	if err != nil {
 		logger.Error("load config failed", "error", err)
 		os.Exit(1)
@@ -180,13 +176,12 @@ func ago(n, hour int) time.Time {
 	return d.AddDate(0, 0, -n)
 }
 
-func initTimezone() error {
+func initTimezone() {
 	ict, err := time.LoadLocation("Asia/Bangkok")
 	if err != nil {
-		return fmt.Errorf("load timezone Asia/Bangkok: %w", err)
+		panic(err)
 	}
 	time.Local = ict
-	return nil
 }
 
 func splitCSV(s string) []string {
