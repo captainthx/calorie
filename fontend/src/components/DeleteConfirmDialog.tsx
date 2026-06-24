@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -22,14 +22,20 @@ export default function DeleteConfirmDialog({
   entry,
   onClose,
   onConfirm,
-}: Props) {
+}: Readonly<Props>) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => { if (open) setError('') }, [open]);
 
   async function handleConfirm() {
     setLoading(true);
+    setError('');
     try {
       await onConfirm();
       onClose();
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -45,6 +51,9 @@ export default function DeleteConfirmDialog({
         <Typography>
           ต้องการลบ <strong>{entry?.food_name}</strong> ใช่หรือไม่?
         </Typography>
+        {error && (
+          <Typography variant="body2" color="error" sx={{ mt: 1 }}>{error}</Typography>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>

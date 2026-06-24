@@ -8,17 +8,15 @@ import {
   TextField,
   Stack,
   MenuItem,
+  Typography,
 } from "@mui/material";
 import type { FoodEntry, FoodEntryPayload } from "../types/api";
+import { todayStr } from "../lib/date";
 
 const OWNER_OPTIONS = [
   { label: "John", value: 1 },
   { label: "Jane", value: 2 },
 ];
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 interface FormState {
   food_name: string;
@@ -54,15 +52,17 @@ export default function FoodFormDialog({
   isAdmin,
   onClose,
   onSubmit,
-}: Props) {
+}: Readonly<Props>) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (open) {
       setErrors({});
       setLoading(false);
+      setSubmitError('');
       if (mode === "edit" && entry) {
         setForm({
           food_name: entry.food_name ?? "",
@@ -104,6 +104,7 @@ export default function FoodFormDialog({
     }
 
     setLoading(true);
+    setSubmitError('');
     try {
       const payload: FoodEntryPayload = {
         food_name: form.food_name.trim(),
@@ -114,6 +115,8 @@ export default function FoodFormDialog({
       if (isAdmin && mode === "create") payload.user_id = Number(form.user_id);
       await onSubmit(payload);
       onClose();
+    } catch (e) {
+      setSubmitError((e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -178,13 +181,16 @@ export default function FoodFormDialog({
           />
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          ยกเลิก
-        </Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={loading}>
-          {loading ? "กำลังบันทึก..." : "บันทึก"}
-        </Button>
+      <DialogActions sx={{ flexDirection: 'column', alignItems: 'stretch', gap: 1, px: 3, pb: 2 }}>
+        {submitError && (
+          <Typography variant="body2" color="error">{submitError}</Typography>
+        )}
+        <Stack direction="row" sx={{ justifyContent: 'flex-end' }} spacing={1}>
+          <Button onClick={onClose} disabled={loading}>ยกเลิก</Button>
+          <Button variant="contained" onClick={handleSubmit} disabled={loading}>
+            {loading ? "กำลังบันทึก..." : "บันทึก"}
+          </Button>
+        </Stack>
       </DialogActions>
     </Dialog>
   );

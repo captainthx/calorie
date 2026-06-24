@@ -62,7 +62,7 @@ interface Props {
   summary: DailySummary | null;
 }
 
-export default function SummaryCards({ summary }: Props) {
+export default function SummaryCards({ summary }: Readonly<Props>) {
   if (!summary) return null;
   return (
     <>

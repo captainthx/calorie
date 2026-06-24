@@ -27,7 +27,7 @@ export default function FoodTable({
   isAdmin = false,
   onEdit,
   onDelete,
-}: Props) {
+}: Readonly<Props>) {
   if (!entries.length) {
     return (
       <Box sx={{ py: 6, textAlign: 'center' }}>

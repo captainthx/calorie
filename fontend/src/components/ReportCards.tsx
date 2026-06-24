@@ -1,6 +1,8 @@
-import { Grid, Card, CardContent, Typography, Box, Chip } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Box } from "@mui/material";
 import BarChartIcon from "@mui/icons-material/BarChart";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import type { AdminReport } from "../types/api";
 
@@ -36,10 +38,13 @@ interface Props {
   report: AdminReport | null;
 }
 
-export default function ReportCards({ report }: Props) {
+export default function ReportCards({ report }: Readonly<Props>) {
   if (!report) return null;
   const diff = report.entries_comparison?.difference ?? 0;
   const diffLabel = diff > 0 ? `+${diff}` : String(diff);
+  const diffColor = diff > 0 ? "success.main" : diff < 0 ? "error.main" : "text.secondary";
+  const diffIcon = diff > 0 ? <TrendingUpIcon /> : diff < 0 ? <TrendingDownIcon /> : <TrendingFlatIcon />;
+  const diffSubtitle = diff > 0 ? "มากกว่าสัปดาห์ก่อน" : diff < 0 ? "น้อยกว่าสัปดาห์ก่อน" : "เท่าสัปดาห์ก่อน";
 
   return (
     <>
@@ -68,19 +73,17 @@ export default function ReportCards({ report }: Props) {
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                <Box sx={{ color: "secondary.main" }}>
-                  <CompareArrowsIcon />
-                </Box>
+                <Box sx={{ color: diffColor }}>{diffIcon}</Box>
                 <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 500 }}>
-                  ผลต่าง
+                  เทียบสัปดาห์ก่อน
                 </Typography>
               </Box>
-              <Chip
-                label={diffLabel}
-                color={diff > 0 ? "success" : diff < 0 ? "error" : "default"}
-                size="medium"
-                sx={{ fontSize: "1.1rem", height: 36, px: 1 }}
-              />
+              <Typography variant="h4" sx={{ fontWeight: "bold", color: diffColor }}>
+                {diffLabel}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+                {diffSubtitle}
+              </Typography>
             </CardContent>
           </Card>
         </Grid>

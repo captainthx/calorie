@@ -2,16 +2,13 @@ import { useState } from "react";
 import { Stack, TextField, Button, Typography } from "@mui/material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { todayStr } from "../lib/date";
 
 interface Props {
   onApply: (from: string, to: string) => void;
 }
 
-export default function DateRangeFilter({ onApply }: Props) {
+export default function DateRangeFilter({ onApply }: Readonly<Props>) {
   const [from, setFrom] = useState(todayStr);
   const [to, setTo] = useState(todayStr);
   const [error, setError] = useState("");
@@ -37,7 +34,7 @@ export default function DateRangeFilter({ onApply }: Props) {
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={1.5}
-      sx={{ alignItems: 'flex-start', flexWrap: 'wrap' }}
+      sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
     >
       <TextField
         label="วันที่เริ่มต้น"
@@ -80,7 +77,10 @@ export default function DateRangeFilter({ onApply }: Props) {
         รีเซ็ต
       </Button>
       {error && (
-        <Typography variant="body2" sx={{ color: 'error.main', alignSelf: "center" }}>
+        <Typography
+          variant="body2"
+          sx={{ color: "error.main", alignSelf: "center" }}
+        >
           {error}
         </Typography>
       )}

@@ -13,8 +13,7 @@ import FoodTable from '../components/FoodTable'
 import FoodFormDialog from '../components/FoodFormDialog'
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog'
 import type { FoodEntry, DailySummary, FoodEntryPayload } from '../types/api'
-
-function todayStr() { return new Date().toISOString().slice(0, 10) }
+import { todayStr } from '../lib/date'
 
 export default function UserPage() {
   const [entries, setEntries] = useState<FoodEntry[]>([])
