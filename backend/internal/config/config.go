@@ -15,9 +15,7 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 	mode := getEnvKey("MODE", "debug")

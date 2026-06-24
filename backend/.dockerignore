@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+
+tmp/
+test_result.log
+api
+
+.git/
+.github/
+graphify-out/
+docs/
