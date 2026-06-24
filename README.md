@@ -5,7 +5,7 @@ Go + Gin + GORM + PostgreSQL API for tracking food entries, daily calorie summar
 ## Project Layout
 
 - `backend/` - Go API server.
-- `fontend/` - Frontend app workspace.
+- `frontend/` - Frontend app workspace.
 - `backend/compose.yml` - Local PostgreSQL database for development and integration tests.
 - `backend/cmd/api/api_test.go` - Automated integration tests that exercise routes, middleware, services, repositories, and PostgreSQL.
 - `backend/internal/food/service_test.go` - Unit tests for service logic using spy mocks.
@@ -163,7 +163,7 @@ For Linux, use a Docker network or set `DB_HOST` to a reachable PostgreSQL host.
 
 ## CI
 
-GitHub Actions workflow lives at `.github/workflows/tests-and-publish-image.yml`.
+GitHub Actions workflows live at `.github/workflows/backend-ci.yml` and `.github/workflows/frontend-ci.yml`.
 
 It runs:
 
