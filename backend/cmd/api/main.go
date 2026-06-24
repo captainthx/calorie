@@ -81,15 +81,8 @@ func main() {
 	}
 
 	gin.SetMode(cfg.Mode)
-	if cfg.Mode == gin.DebugMode {
-		gin.DebugPrintRouteFunc = func(string, string, string, int) {}
-		gin.DebugPrintFunc = func(string, ...any) {}
-	}
 	router := gin.New()
-	if err := router.SetTrustedProxies(nil); err != nil {
-		logger.Error("set trusted proxies failed", "error", err)
-		os.Exit(1)
-	}
+	_ = router.SetTrustedProxies(nil)
 	router.Use(gin.Recovery(), middleware.RequestLogger(logger))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     splitCSV(cfg.CORSAllowedOrigins),
@@ -123,11 +116,7 @@ func main() {
 	routes.RegisterAdminRoutes(admin, cfg.Db)
 
 	logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
-	server := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: router,
-	}
-	if err := server.ListenAndServe(); err != nil {
+	if err := router.Run(":" + cfg.Port); err != nil {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
 	}
