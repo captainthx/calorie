@@ -1,5 +1,9 @@
 name: Frontend CI
 
+permissions:
+  contents: read
+  pull-requests: read
+
 on:
   pull_request:
     branches:
@@ -24,7 +28,7 @@ jobs:
         with:
           filters: |
             frontend:
-              - 'fontend/**'
+              - 'frontend/**'
               - '.github/workflows/frontend-ci.yml'
 
   frontend-lint:
@@ -34,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: fontend
+        working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +48,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: fontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -59,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: fontend
+        working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,7 +73,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: fontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
