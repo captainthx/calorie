@@ -64,6 +64,7 @@ This API uses predefined bearer tokens, not JWT login.
 ## Common API Routes
 
 - `GET /ping` - basic app ping.
+- `GET /health` - readiness check; returns `{"status":"ok"}` (200) or `{"status":"unhealthy"}` (503) based on DB connectivity.
 - `GET /docs` - interactive Swagger UI.
 - `GET /api/food-entries` - list current user's entries, optional `date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`.
 - `POST /api/food-entries` - create current user's entry.
@@ -149,7 +150,7 @@ docker build -t calorie-api .
 Run against the local Compose database from macOS/Windows:
 
 ```bash
-docker run --rm -p 8080:8080 \
+docker run -d -p 8080:8080 \
   -e GIN_MODE=debug \
   -e PORT=8080 \
   -e DB_HOST=host.docker.internal \
@@ -157,7 +158,15 @@ docker run --rm -p 8080:8080 \
   -e DB_USERNAME=myuser \
   -e DB_PASSWORD=mysecretpassword \
   -e DB_NAME=mydatabase \
+  --name calorie-api \
   calorie-api
+```
+
+Stop and restart without re-specifying env vars:
+
+```bash
+docker stop calorie-api   # stop
+docker start calorie-api  # restart
 ```
 
 For Linux, use a Docker network or set `DB_HOST` to a reachable PostgreSQL host.

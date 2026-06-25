@@ -62,7 +62,7 @@ func shouldSkipRequestLog(method, path string) bool {
 	if method == http.MethodOptions {
 		return true
 	}
-	if path == "/ping" {
+	if path == "/ping" || path == "/health" {
 		return true
 	}
 	return path == "/docs" || strings.HasPrefix(path, "/docs/")
