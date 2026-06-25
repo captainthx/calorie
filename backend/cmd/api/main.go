@@ -94,17 +94,19 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	routes.RegisterPublicRoutes(router, cfg.Db)
-	router.GET("/docs", func(c *gin.Context) {
-		c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
-	})
-	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
-	router.GET("/docs/*any", func(c *gin.Context) {
-		if c.Param("any") == "/" {
+	if cfg.Mode != gin.ReleaseMode {
+		router.GET("/docs", func(c *gin.Context) {
 			c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
-			return
-		}
-		swaggerHandler(c)
-	})
+		})
+		swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+		router.GET("/docs/*any", func(c *gin.Context) {
+			if c.Param("any") == "/" {
+				c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
+				return
+			}
+			swaggerHandler(c)
+		})
+	}
 
 	userRepo := user.NewUsersRepository(cfg.Db)
 
