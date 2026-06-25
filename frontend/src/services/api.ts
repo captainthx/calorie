@@ -1,7 +1,8 @@
 import { getToken, clearToken } from '../lib/auth';
 import type { FoodEntry, DailySummary, AdminReport, FoodEntryPayload } from '../types/api';
+import { config } from '../config';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string
+const BASE_URL = config.API_BASE_URL
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken()
