@@ -575,3 +575,14 @@ func runAdminReportTests(t *testing.T) {
 		assertEq(t, "comparison.difference", float64(9), comparison["difference"])
 	})
 }
+
+func TestDatabasePoolConfig(t *testing.T) {
+	sqlDB, err := testDB.DB()
+	if err != nil {
+		t.Fatalf("get sql.DB: %v", err)
+	}
+	stats := sqlDB.Stats()
+	if stats.MaxOpenConnections != 25 {
+		t.Errorf("MaxOpenConnections = %d, want 25", stats.MaxOpenConnections)
+	}
+}
