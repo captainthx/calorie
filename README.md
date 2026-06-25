@@ -138,6 +138,36 @@ HTTP requests are logged with structured `slog` output.
 
 ## Docker
 
+### All Services (Recommended)
+
+Run all three services (PostgreSQL + backend + frontend) with one command from the project root:
+
+```bash
+docker compose up -d --build
+```
+
+- Frontend → `http://localhost:3000`
+- Backend API → `http://localhost:8080`
+
+Stop all services:
+
+```bash
+docker compose down
+```
+
+Stop and remove volumes (wipe database):
+
+```bash
+docker compose down -v
+```
+
+View logs:
+
+```bash
+docker compose logs -f           # all services
+docker compose logs -f backend   # backend only
+```
+
 ### Backend
 
 Build the backend image:
