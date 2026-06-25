@@ -27,7 +27,13 @@ func LoadConfig() (*Config, error) {
 	dbPassword := getEnvKey("DB_PASSWORD", "mysecretpassword")
 	dbName := getEnvKey("DB_NAME", "mydatabase")
 
-	db, err := loadDb(dbPort, dbHost, dbUser, dbPassword, dbName)
+	var db *gorm.DB
+	var err error
+	if dsn := getEnvKey("DATABASE_URL", ""); dsn != "" {
+		db, err = loadDbFromDSN(dsn)
+	} else {
+		db, err = loadDb(dbPort, dbHost, dbUser, dbPassword, dbName)
+	}
 	if err != nil {
 		return nil, err
 	}

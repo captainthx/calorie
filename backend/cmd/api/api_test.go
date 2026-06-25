@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"github.com/captainthx/calorie/backend/internal/config"
-	"github.com/captainthx/calorie/backend/internal/food"
+	"github.com/captainthx/calorie/backend/internal/migrations"
 	"github.com/captainthx/calorie/backend/internal/middleware"
 	routes "github.com/captainthx/calorie/backend/internal/routers"
 	"github.com/captainthx/calorie/backend/internal/user"
 	"github.com/gin-gonic/gin"
+	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
 )
 
@@ -38,37 +39,19 @@ func TestMain(m *testing.M) {
 	}
 	testDB = cfg.Db
 
-	createUserRoleEnumQuery := `DO $$ BEGIN
-		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role_enum') THEN
-			CREATE TYPE user_role_enum AS ENUM ('ADMIN', 'USER');
-		END IF;
-	END $$`
-	if err := testDB.Exec(createUserRoleEnumQuery).Error; err != nil {
-		panic(fmt.Sprintf("create enum: %v", err))
+	mg := gormigrate.New(testDB, gormigrate.DefaultOptions, migrations.All(true))
+	if err := mg.Migrate(); err != nil {
+		panic(fmt.Sprintf("migrate: %v", err))
 	}
 
-	if err := testDB.AutoMigrate(&user.Users{}, &food.FoodEntry{}); err != nil {
-		panic(fmt.Sprintf("auto migrate: %v", err))
-	}
 	testDB.Exec("TRUNCATE TABLE food_entries RESTART IDENTITY CASCADE")
-	testDB.Model(&user.Users{}).
-		Where("daily_calorie_limit = 0 AND role = ?", user.User).
-		Updates(map[string]interface{}{"daily_calorie_limit": 2100, "monthly_price_limit": 1000})
-
-	var count int64
-	testDB.Model(&user.Users{}).Count(&count)
-	if count == 0 {
-		testDB.Create(&[]user.Users{
-			{Name: "John", Role: user.User, Token: "user-token-123", DailyCalorieLimit: 2100, MonthlyPriceLimit: 1000},
-			{Name: "Jane", Role: user.User, Token: "user-token-456", DailyCalorieLimit: 2100, MonthlyPriceLimit: 1000},
-			{Name: "Admin", Role: user.Admin, Token: "admin-token-789"},
-		})
-	}
 	var john, jane user.Users
 	testDB.Where("token = ?", "user-token-123").First(&john)
 	testDB.Where("token = ?", "user-token-456").First(&jane)
 	johnID = john.ID
-	seedFoodEntries(testDB, john.ID, jane.ID)
+	if err := migrations.SeedFoodEntries(testDB, john.ID, jane.ID); err != nil {
+		panic(fmt.Sprintf("seed food entries: %v", err))
+	}
 
 	gin.SetMode("test")
 	testRouter = gin.New()
@@ -132,6 +115,12 @@ func assertFloatNear(t *testing.T, name string, want, got, delta float64) {
 	if got < want-delta || got > want+delta {
 		t.Errorf("FAIL %s: expected %v +/- %v, got %v", name, want, delta, got)
 	}
+}
+
+func ago(n, hour int) time.Time {
+	now := time.Now()
+	d := time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, now.Location())
+	return d.AddDate(0, 0, -n)
 }
 
 type integrationState struct {
