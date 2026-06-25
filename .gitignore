@@ -60,4 +60,4 @@ dist-ssr
 *.sln
 *.sw?
 
-HANDOFF.md
+.wolf/*
