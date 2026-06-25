@@ -94,6 +94,12 @@ func dataField(b []byte) map[string]any {
 	return d
 }
 
+func dataArrayField(b []byte) []any {
+	m := decodeBody(b)
+	d, _ := m["data"].([]any)
+	return d
+}
+
 func checkCode(t *testing.T, name string, w *httptest.ResponseRecorder, want int) bool {
 	t.Helper()
 	if w.Code != want {
@@ -139,6 +145,7 @@ func TestIntegration(t *testing.T) {
 	runPublicRouteTests(t)
 	runAuthChecks(t)
 	runDailySummaryTests(t, state)
+	runDailySummaryRangeTests(t, state)
 	runAdminReportTests(t)
 	runUserFoodEntryTests(t, state)
 	runAdminFoodEntryTests(t, state)
@@ -562,6 +569,47 @@ func runAdminReportTests(t *testing.T) {
 		assertEq(t, "comparison.current_week", float64(17), comparison["current_week"])
 		assertEq(t, "comparison.previous_week", float64(8), comparison["previous_week"])
 		assertEq(t, "comparison.difference", float64(9), comparison["difference"])
+	})
+}
+
+func runDailySummaryRangeTests(t *testing.T, state *integrationState) {
+	t.Helper()
+
+	t.Run("daily_summary_range_valid", func(t *testing.T) {
+		// ใช้ช่วงที่ครอบ seed data (today + yesterday)
+		from := ago(7, 0).Format("2006-01-02")
+		to := state.today
+		w := apiReq("GET", "/api/daily-summary-range?date_from="+from+"&date_to="+to, "user-token-123", "")
+		if !checkCode(t, "daily_summary_range_valid", w, 200) {
+			return
+		}
+		arr := dataArrayField(w.Body.Bytes())
+		for _, item := range arr {
+			d, ok := item.(map[string]any)
+			if !ok {
+				t.Fatal("FAIL daily_summary_range_valid: item is not object")
+			}
+			for _, key := range []string{"date", "total_calories", "calorie_limit", "calorie_exceeded"} {
+				if _, exists := d[key]; !exists {
+					t.Errorf("FAIL daily_summary_range_valid: missing field %q", key)
+				}
+			}
+		}
+	})
+
+	t.Run("daily_summary_range_missing_date_from", func(t *testing.T) {
+		w := apiReq("GET", "/api/daily-summary-range?date_to="+state.today, "user-token-123", "")
+		checkCode(t, "daily_summary_range_missing_date_from", w, 400)
+	})
+
+	t.Run("daily_summary_range_date_from_after_to", func(t *testing.T) {
+		w := apiReq("GET", "/api/daily-summary-range?date_from="+state.today+"&date_to="+state.yesterday, "user-token-123", "")
+		checkCode(t, "daily_summary_range_date_from_after_to", w, 400)
+	})
+
+	t.Run("daily_summary_range_no_auth", func(t *testing.T) {
+		w := apiReq("GET", "/api/daily-summary-range?date_from="+state.yesterday+"&date_to="+state.today, "", "")
+		checkCode(t, "daily_summary_range_no_auth", w, 401)
 	})
 }
 

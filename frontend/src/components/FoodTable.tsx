@@ -18,6 +18,7 @@ import type { FoodEntry } from "../types/api";
 interface Props {
   entries: FoodEntry[];
   isAdmin?: boolean;
+  exceededDates?: Set<string>;
   onEdit: (entry: FoodEntry) => void;
   onDelete: (entry: FoodEntry) => void;
 }
@@ -25,6 +26,7 @@ interface Props {
 export default function FoodTable({
   entries = [],
   isAdmin = false,
+  exceededDates,
   onEdit,
   onDelete,
 }: Readonly<Props>) {
@@ -66,11 +68,14 @@ export default function FoodTable({
           </TableRow>
         </TableHead>
         <TableBody>
-          {entries.map((row) => (
+          {entries.map((row) => {
+            const dateKey = row.entry_date ? row.entry_date.slice(0, 10) : ''
+            const exceeded = exceededDates?.has(dateKey) ?? false
+            return (
             <TableRow
               key={row.id}
               hover
-              sx={{ "&:last-child td": { border: 0 } }}
+              sx={{ "&:last-child td": { border: 0 }, bgcolor: exceeded ? 'rgba(211,47,47,0.08)' : 'inherit' }}
             >
               {isAdmin && (
                 <TableCell>{row.user_name ?? `User ${row.user_id}`}</TableCell>
@@ -104,7 +109,8 @@ export default function FoodTable({
                 </Tooltip>
               </TableCell>
             </TableRow>
-          ))}
+            )
+          })}
         </TableBody>
       </Table>
     </TableContainer>

@@ -30,6 +30,9 @@ type mockRepo struct {
 	last7CalSum int64
 	capturedTo  time.Time
 
+	dailyCalRows    []DailyCalorieRow
+	sumCalPerDayErr error
+
 	// error injection
 	createErr          error
 	updateErr          error
@@ -109,6 +112,9 @@ func (m *mockRepo) AvgCaloriesPerUserInRange(from, to time.Time) (float64, error
 func (m *mockRepo) CountUsers() (int64, error)                                    { return m.usersCount, nil }
 func (m *mockRepo) SumCaloriesInRange(from, to time.Time) (int64, error) {
 	return m.last7CalSum, nil
+}
+func (m *mockRepo) SumCaloriesPerDayInRange(userID uint, from, to time.Time) ([]DailyCalorieRow, error) {
+	return m.dailyCalRows, m.sumCalPerDayErr
 }
 
 // --- spy mock user repository ---
@@ -797,5 +803,40 @@ func TestGetReportWindowIncludesToday(t *testing.T) {
 	expectedTo := today.AddDate(0, 0, 1)
 	if !repo.capturedTo.Equal(expectedTo) {
 		t.Errorf("last7 end boundary: want %v (tomorrow), got %v — today must be included", expectedTo, repo.capturedTo)
+	}
+}
+
+func TestDailySummaryRange(t *testing.T) {
+	from := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2025, 6, 3, 0, 0, 0, 0, time.UTC)
+	u := &user.Users{DailyCalorieLimit: 2100}
+
+	repo := &mockRepo{
+		dailyCalRows: []DailyCalorieRow{
+			{Date: "2025-06-01", TotalCalories: 1800},
+			{Date: "2025-06-02", TotalCalories: 2200},
+			{Date: "2025-06-03", TotalCalories: 2100},
+		},
+	}
+	svc := newTestSvc(repo)
+
+	result, err := svc.DailySummaryRange(u, from, to)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(result))
+	}
+	if result[0].CalorieExceeded {
+		t.Error("2025-06-01: 1800 should not exceed 2100")
+	}
+	if !result[1].CalorieExceeded {
+		t.Error("2025-06-02: 2200 should exceed 2100")
+	}
+	if result[2].CalorieExceeded {
+		t.Error("2025-06-03: 2100 equal to limit should not exceed")
+	}
+	if result[0].CalorieLimit != 2100 {
+		t.Errorf("CalorieLimit: got %d, want 2100", result[0].CalorieLimit)
 	}
 }

@@ -31,6 +31,13 @@ export interface AdminReport {
   }
 }
 
+export interface DailySummaryRangeItem {
+  date: string
+  total_calories: number
+  calorie_limit: number
+  calorie_exceeded: boolean
+}
+
 export interface FoodEntryPayload {
   food_name: string
   calories: number

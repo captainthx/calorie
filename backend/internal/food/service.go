@@ -119,6 +119,23 @@ func (s *FoodService) DailySummary(u *user.Users, date time.Time) (*DailySummary
 	}, nil
 }
 
+func (s *FoodService) DailySummaryRange(u *user.Users, from, to time.Time) ([]DailySummaryRangeItem, error) {
+	rows, err := s.repo.SumCaloriesPerDayInRange(u.ID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("sum calories per day for user %d: %w", u.ID, err)
+	}
+	result := make([]DailySummaryRangeItem, len(rows))
+	for i, row := range rows {
+		result[i] = DailySummaryRangeItem{
+			Date:            row.Date,
+			TotalCalories:   row.TotalCalories,
+			CalorieLimit:    u.DailyCalorieLimit,
+			CalorieExceeded: row.TotalCalories > u.DailyCalorieLimit,
+		}
+	}
+	return result, nil
+}
+
 func (s *FoodService) ListAll(dateFrom, dateTo *time.Time) ([]AdminFoodEntryResponse, error) {
 	entries, err := s.repo.FindAll(dateFrom, dateTo)
 	if err != nil {

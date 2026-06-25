@@ -20,6 +20,7 @@ type Repository interface {
 	AvgCaloriesPerUserInRange(from, to time.Time) (float64, error)
 	CountUsers() (int64, error)
 	SumCaloriesInRange(from, to time.Time) (int64, error)
+	SumCaloriesPerDayInRange(userID uint, from, to time.Time) ([]DailyCalorieRow, error)
 }
 
 type repository struct {
@@ -143,4 +144,34 @@ func (r *repository) SumCaloriesInRange(from, to time.Time) (int64, error) {
 		Where("entry_date >= ? AND entry_date < ?", from, to).
 		Scan(&total).Error
 	return total, err
+}
+
+func (r *repository) SumCaloriesPerDayInRange(userID uint, from, to time.Time) ([]DailyCalorieRow, error) {
+	sqlDB, err := r.db.DB()
+	if err != nil {
+		return nil, err
+	}
+	const q = `
+		SELECT TO_CHAR(DATE(entry_date), 'YYYY-MM-DD') AS date,
+		       COALESCE(SUM(calories), 0)::int AS total_calories
+		FROM food_entries
+		WHERE user_id = $1 AND DATE(entry_date) >= $2::date AND DATE(entry_date) <= $3::date
+		  AND deleted_at IS NULL
+		GROUP BY DATE(entry_date)
+		ORDER BY DATE(entry_date) ASC
+	`
+	sqlRows, err := sqlDB.Query(q, userID, from.Format("2006-01-02"), to.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	defer sqlRows.Close()
+	var result []DailyCalorieRow
+	for sqlRows.Next() {
+		var row DailyCalorieRow
+		if err := sqlRows.Scan(&row.Date, &row.TotalCalories); err != nil {
+			return nil, err
+		}
+		result = append(result, row)
+	}
+	return result, sqlRows.Err()
 }

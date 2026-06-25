@@ -240,6 +240,43 @@ func (h *Handler) DailySummary(c *gin.Context) {
 	response.Success(c, summary)
 }
 
+// DailySummaryRange godoc
+// @Summary Get daily summary for date range
+// @Description Get per-day calorie summary for the authenticated user over a date range.
+// @Tags Summaries
+// @Security BearerAuth
+// @Produce json
+// @Param date_from query string true "Start date (YYYY-MM-DD)"
+// @Param date_to query string true "End date (YYYY-MM-DD)"
+// @Success 200 {object} response.SuccessBody{data=[]DailySummaryRangeItem}
+// @Failure 400 {object} response.ErrorBody
+// @Failure 401 {object} response.ErrorBody
+// @Failure 500 {object} response.ErrorBody
+// @Router /api/daily-summary-range [get]
+func (h *Handler) DailySummaryRange(c *gin.Context) {
+	u := c.MustGet("user").(*user.Users)
+	from, err := parseOptionalDate(c.Query("date_from"))
+	if err != nil || from == nil {
+		response.BadRequest(c, "date_from is required and must be YYYY-MM-DD")
+		return
+	}
+	to, err := parseOptionalDate(c.Query("date_to"))
+	if err != nil || to == nil {
+		response.BadRequest(c, "date_to is required and must be YYYY-MM-DD")
+		return
+	}
+	if from.After(*to) {
+		response.BadRequest(c, "date_from must not be after date_to")
+		return
+	}
+	result, err := h.svc.DailySummaryRange(u, *from, *to)
+	if err != nil {
+		response.InternalServerError(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 func handleServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrForbidden):

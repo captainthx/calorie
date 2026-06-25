@@ -56,6 +56,13 @@ type DailySummaryResponse struct {
 	PriceExceeded   bool    `json:"price_exceeded"`
 }
 
+type DailySummaryRangeItem struct {
+	Date            string `json:"date"`
+	TotalCalories   int    `json:"total_calories"`
+	CalorieLimit    int    `json:"calorie_limit"`
+	CalorieExceeded bool   `json:"calorie_exceeded"`
+}
+
 type ReportResponse struct {
 	EntriesLast7Days         int64          `json:"entries_last_7_days"`
 	EntriesPrevious7Days     int64          `json:"entries_previous_7_days"`
@@ -68,4 +75,9 @@ type ComparisonData struct {
 	CurrentWeek  int64 `json:"current_week"`
 	PreviousWeek int64 `json:"previous_week"`
 	Difference   int64 `json:"difference"`
+}
+
+type DailyCalorieRow struct {
+	Date          string `gorm:"column:date"`
+	TotalCalories int    `gorm:"column:total_calories"`
 }

@@ -1,5 +1,5 @@
 import { getToken, clearToken } from '../lib/auth';
-import type { FoodEntry, DailySummary, AdminReport, FoodEntryPayload } from '../types/api';
+import type { FoodEntry, DailySummary, DailySummaryRangeItem, AdminReport, FoodEntryPayload } from '../types/api';
 import { config } from '../config';
 
 const BASE_URL = config.API_BASE_URL
@@ -47,6 +47,9 @@ export const deleteFoodEntry = (id: number) =>
 
 export const getDailySummary = (date: string) =>
   request<DailySummary>(`/daily-summary?date=${date}`)
+
+export const getDailySummaryRange = (dateFrom: string, dateTo: string) =>
+  request<DailySummaryRangeItem[]>(`/daily-summary-range?date_from=${dateFrom}&date_to=${dateTo}`)
 
 // Admin food entries
 export const getAdminFoodEntries = (dateFrom: string, dateTo: string) =>

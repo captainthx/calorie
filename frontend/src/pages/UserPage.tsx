@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Box, Button, Container, Snackbar, Alert, Typography,
+  Box, Button, Container, Snackbar, Alert, AlertTitle, Typography,
   AppBar, Toolbar, LinearProgress, Paper,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import { getFoodEntries, createFoodEntry, updateFoodEntry, deleteFoodEntry, getDailySummary } from '../services/api'
+import { getFoodEntries, createFoodEntry, updateFoodEntry, deleteFoodEntry, getDailySummary, getDailySummaryRange } from '../services/api'
 import { clearToken } from '../lib/auth'
 import { useSnack } from '../hooks/useSnack'
 import SummaryCards from '../components/SummaryCards'
@@ -12,12 +12,13 @@ import DateRangeFilter from '../components/DateRangeFilter'
 import FoodTable from '../components/FoodTable'
 import FoodFormDialog from '../components/FoodFormDialog'
 import DeleteConfirmDialog from '../components/DeleteConfirmDialog'
-import type { FoodEntry, DailySummary, FoodEntryPayload } from '../types/api'
+import type { FoodEntry, DailySummary, DailySummaryRangeItem, FoodEntryPayload } from '../types/api'
 import { todayStr } from '../lib/date'
 
 export default function UserPage() {
   const [entries, setEntries] = useState<FoodEntry[]>([])
   const [summary, setSummary] = useState<DailySummary | null>(null)
+  const [exceededItems, setExceededItems] = useState<DailySummaryRangeItem[]>([])
   const [loading, setLoading] = useState(false)
   const [dateFrom, setDateFrom] = useState(todayStr)
   const [dateTo, setDateTo] = useState(todayStr)
@@ -29,8 +30,12 @@ export default function UserPage() {
   const loadEntries = useCallback(async (from: string, to: string) => {
     setLoading(true)
     try {
-      const data = await getFoodEntries(from, to)
+      const [data, range] = await Promise.all([
+        getFoodEntries(from, to),
+        getDailySummaryRange(from, to),
+      ])
       setEntries(data ?? [])
+      setExceededItems((range ?? []).filter(r => r.calorie_exceeded))
     } catch (e) {
       show((e as Error).message, 'error')
     } finally {
@@ -96,6 +101,19 @@ export default function UserPage() {
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <SummaryCards summary={summary} />
 
+        {exceededItems.length > 0 && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <AlertTitle>มี {exceededItems.length} วันที่แคลอรีเกินขีดจำกัด</AlertTitle>
+            {exceededItems.map(item => (
+              <Typography key={item.date} variant="body2">
+                {new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                {' — '}
+                {item.total_calories.toLocaleString()} / {item.calorie_limit.toLocaleString()} kcal
+              </Typography>
+            ))}
+          </Alert>
+        )}
+
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
           <Typography
             variant="subtitle2"
@@ -125,6 +143,7 @@ export default function UserPage() {
 
           <FoodTable
             entries={entries}
+            exceededDates={new Set(exceededItems.map(r => r.date))}
             onEdit={(e) => { setEditEntry(e); setFormOpen(true) }}
             onDelete={(e) => setDeleteTarget(e)}
           />

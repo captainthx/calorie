@@ -19,6 +19,7 @@ func registerFoodRoutes(rg *gin.RouterGroup, db *gorm.DB) {
 	rg.PATCH("/food-entries/:id", foodHdl.Update)
 	rg.DELETE("/food-entries/:id", foodHdl.Delete)
 	rg.GET("/daily-summary", foodHdl.DailySummary)
+	rg.GET("/daily-summary-range", foodHdl.DailySummaryRange)
 }
 
 func registerFoodAdminRoutes(rg *gin.RouterGroup, db *gorm.DB) {
