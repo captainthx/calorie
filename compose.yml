@@ -22,7 +22,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      GIN_MODE: release
+      GIN_MODE: debug
       PORT: "8080"
       DB_HOST: postgres
       DB_PORT: "5432"

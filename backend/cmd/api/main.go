@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,14 +12,14 @@ import (
 	"time"
 
 	"github.com/captainthx/calorie/backend/internal/config"
-	"github.com/captainthx/calorie/backend/internal/migrations"
 	"github.com/captainthx/calorie/backend/internal/middleware"
+	"github.com/captainthx/calorie/backend/internal/migrations"
 	routes "github.com/captainthx/calorie/backend/internal/routers"
 	"github.com/captainthx/calorie/backend/internal/user"
+	sentry "github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-gormigrate/gormigrate/v2"
-	sentry "github.com/getsentry/sentry-go"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
