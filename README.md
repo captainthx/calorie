@@ -1,18 +1,17 @@
 # Simple Calorie App
 
-Go + Gin + GORM + PostgreSQL API for tracking food entries, daily calorie summaries, monthly price limits, and admin reports.
+Calorie tracking app with:
 
-## Project Layout
+- `backend/` - Go + Gin + GORM + PostgreSQL API
+- `frontend/` - Vite + React UI
+- `backend/compose.yml` - PostgreSQL only, for local backend work
+- `compose.yml` - PostgreSQL + backend + frontend, for running the full stack
 
-- `backend/` - Go API server.
-- `frontend/` - Frontend app workspace.
-- `backend/compose.yml` - Local PostgreSQL database for development and integration tests.
-- `backend/cmd/api/api_test.go` - Automated integration tests that exercise routes, middleware, services, repositories, and PostgreSQL.
-- `backend/internal/food/service_test.go` - Unit tests for service logic using spy mocks.
+## Quick Start
 
-## Local Setup
+### Backend only
 
-Create a local env file:
+Create local env:
 
 ```bash
 cp backend/.env.example backend/.env
@@ -32,11 +31,37 @@ cd backend
 go run ./cmd/api
 ```
 
-The API listens on `http://localhost:8080` by default.
+API base URL: `http://localhost:8080`
+
+### Full stack
+
+Run everything from the project root:
+
+```bash
+docker compose up -d --build
+```
+
+Open:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
+- Swagger: `http://localhost:8080/docs`
+
+Stop everything:
+
+```bash
+docker compose down
+```
+
+Wipe database volume too:
+
+```bash
+docker compose down -v
+```
 
 ## Environment
 
-Default local values match `backend/compose.yml`.
+Default backend values match `backend/compose.yml`:
 
 ```bash
 GIN_MODE=debug
@@ -49,36 +74,59 @@ DB_PASSWORD=mysecretpassword
 DB_NAME=mydatabase
 ```
 
-`.env` is optional when environment variables are supplied directly, which is useful for Docker and CI.
+`.env` is optional if you pass env vars directly.
 
-`CORS_ALLOWED_ORIGINS` is a comma-separated allowlist for browser frontends. For local development the defaults cover common frontend ports `3000` and `5173`.
+## Frontend Runtime Config
+
+The frontend no longer bakes the API URL into the JS bundle.
+
+Resolution order:
+
+1. `window._env_.API_BASE_URL`
+2. `VITE_API_BASE_URL`
+3. `http://localhost:8080/api`
+
+Relevant files:
+
+- `frontend/public/env.js` - empty stub for local dev
+- `frontend/index.html` - loads `env.js` before the React bundle
+- `frontend/src/config.ts` - runtime fallback chain
+- `frontend/src/services/api.ts` - reads `config.API_BASE_URL`
+- `frontend/Dockerfile` - writes `env.js` when the container starts
+
+Result: build the image once, then switch backend targets at runtime with `-e API_BASE_URL=...`.
 
 ## Auth Tokens
 
-This API uses predefined bearer tokens, not JWT login.
+The API uses predefined bearer tokens.
 
 - User John: `Authorization: Bearer user-token-123`
 - User Jane: `Authorization: Bearer user-token-456`
 - Admin: `Authorization: Bearer admin-token-789`
 
-## Common API Routes
+## API Routes
 
-- `GET /ping` - basic app ping.
-- `GET /health` - readiness check; returns `{"status":"ok"}` (200) or `{"status":"unhealthy"}` (503) based on DB connectivity.
-- `GET /docs` - interactive Swagger UI.
-- `GET /api/food-entries` - list current user's entries, optional `date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`.
-- `POST /api/food-entries` - create current user's entry.
-- `PUT /api/food-entries/:id` - full update current user's entry.
-- `PATCH /api/food-entries/:id` - partial update current user's entry.
-- `DELETE /api/food-entries/:id` - delete current user's entry.
-- `GET /api/daily-summary` - current user's summary, optional `date=YYYY-MM-DD`.
-- `GET /api/admin/food-entries` - admin list all entries.
-- `POST /api/admin/food-entries` - admin create entry for any user.
-- `GET /api/admin/reports` - admin report.
+Public routes:
 
-## Response Contract
+- `GET /ping` - simple liveness response
+- `GET /health` - readiness check; returns `{"status":"ok"}` or `{"status":"unhealthy"}`
+- `GET /docs` - Swagger UI redirect
 
-Successful responses use one shape:
+Authenticated routes:
+
+- `GET /api/food-entries`
+- `POST /api/food-entries`
+- `PUT /api/food-entries/:id`
+- `PATCH /api/food-entries/:id`
+- `DELETE /api/food-entries/:id`
+- `GET /api/daily-summary`
+- `GET /api/admin/food-entries`
+- `POST /api/admin/food-entries`
+- `GET /api/admin/reports`
+
+## Response Shape
+
+Business API success responses use:
 
 ```json
 {
@@ -87,7 +135,7 @@ Successful responses use one shape:
 }
 ```
 
-Error responses use one shape:
+Error responses use:
 
 ```json
 {
@@ -96,88 +144,19 @@ Error responses use one shape:
 }
 ```
 
-Internal failures intentionally return the generic message `internal server error` while the real error is kept in server logs.
-
-## Swagger
-
-Swagger UI is available at `http://localhost:8080/docs` and redirects to the generated Swagger UI page.
-
-Regenerate the docs after changing handler annotations:
-
-```bash
-cd backend
-$(go env GOPATH)/bin/swag init -g ./cmd/api/main.go -o ./docs
-```
-
-## Tests
-
-Run regular unit tests:
-
-```bash
-cd backend
-go test ./...
-```
-
-Run integration tests:
-
-```bash
-cd backend
-docker compose up -d
-go test -tags integration -v ./cmd/api/... -timeout 60s
-```
-
-The integration tests truncate and reseed `food_entries`, then hit the real Gin router and PostgreSQL through `httptest`.
-
-## Logging
-
-HTTP requests are logged with structured `slog` output.
-
-- `debug` and `test` modes use text logs.
-- `release` mode uses JSON logs.
-- Each request log includes method, path, status, latency, client IP, and user metadata when available.
+`GET /health` is the one exception and returns plain JSON so Docker and load balancers can probe it easily.
 
 ## Docker
 
-### All Services (Recommended)
+### Backend image
 
-Run all three services (PostgreSQL + backend + frontend) with one command from the project root:
-
-```bash
-docker compose up -d --build
-```
-
-- Frontend → `http://localhost:3000`
-- Backend API → `http://localhost:8080`
-
-Stop all services:
+Build:
 
 ```bash
-docker compose down
+docker build -t calorie-api ./backend
 ```
 
-Stop and remove volumes (wipe database):
-
-```bash
-docker compose down -v
-```
-
-View logs:
-
-```bash
-docker compose logs -f           # all services
-docker compose logs -f backend   # backend only
-```
-
-### Backend
-
-Build the backend image:
-
-```bash
-cd backend
-docker build -t calorie-api .
-```
-
-Run against the local Compose database from macOS/Windows:
+Run against a PostgreSQL host:
 
 ```bash
 docker run -d -p 8080:8080 \
@@ -192,63 +171,98 @@ docker run -d -p 8080:8080 \
   calorie-api
 ```
 
-Stop and restart without re-specifying env vars:
+Stop and start:
 
 ```bash
-docker stop calorie-api   # stop
-docker start calorie-api  # restart
+docker stop calorie-api
+docker start calorie-api
 ```
 
-For Linux, use a Docker network or set `DB_HOST` to a reachable PostgreSQL host.
+### Frontend image
 
-### Frontend
-
-Build the frontend image once (no env baked in):
+Build once:
 
 ```bash
 docker build -t calorie-frontend ./frontend
 ```
 
-Run on port 3000 (default backend `http://localhost:8080/api`):
+Run with the default backend:
 
 ```bash
 docker run -d -p 3000:8080 --name calorie-ui calorie-frontend
 ```
 
-Point to a different backend at runtime:
+Run with a custom backend URL:
 
 ```bash
-docker run -d -p 3000:8080 --name calorie-ui \
+docker run -d -p 3000:8080 \
   -e API_BASE_URL=http://your-backend:8080/api \
+  --name calorie-ui \
   calorie-frontend
 ```
 
-Stop and restart without losing the container:
+Stop and start:
 
 ```bash
 docker stop calorie-ui
 docker start calorie-ui
 ```
 
-Open `http://localhost:3000` in the browser. The API URL is injected at container start via `/env.js` — no rebuild needed to switch environments.
+No rebuild is needed when only the backend URL changes.
+
+### Compose logs
+
+```bash
+docker compose logs -f
+docker compose logs -f backend
+docker compose logs -f frontend
+```
+
+## Swagger
+
+Swagger UI:
+
+```bash
+http://localhost:8080/docs
+```
+
+Regenerate docs after changing annotations:
+
+```bash
+cd backend
+go run github.com/swaggo/swag/cmd/swag@latest init -g ./cmd/api/main.go -o ./docs
+```
+
+## Tests
+
+Unit tests:
+
+```bash
+cd backend
+go test ./...
+```
+
+Integration tests:
+
+```bash
+cd backend
+docker compose up -d
+go test -tags integration -v ./cmd/api/... -timeout 60s
+```
+
+Frontend build check:
+
+```bash
+cd frontend
+npm run build
+```
 
 ## CI
 
-GitHub Actions workflows live at `.github/workflows/backend-ci.yml` and `.github/workflows/frontend-ci.yml`.
+GitHub Actions workflows live in `.github/workflows/`.
 
-It runs:
+Current checks include:
 
 - `go test ./...`
 - `go test -tags integration -v ./cmd/api/...`
-
-The integration job starts a PostgreSQL service with the same local credentials.
-
-## Branching
-
-Use a small trunk-based flow until the project needs release branches.
-
-- `main` is always deployable.
-- Feature work uses `feature/<short-name>` or `codex/<short-name>`.
-- Open PRs into `main`; merge only after CI passes.
-- Use protected `main` when the repo moves to shared team work.
-- Add `release/<version>` branches only when production hotfixes need to diverge from active feature work.
+- frontend build and lint checks

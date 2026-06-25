@@ -12,7 +12,6 @@ import (
 	"github.com/captainthx/calorie/backend/internal/middleware"
 	routes "github.com/captainthx/calorie/backend/internal/routers"
 	"github.com/captainthx/calorie/backend/internal/user"
-	"github.com/captainthx/calorie/backend/pkg/response"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -94,17 +93,7 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	}))
-	router.GET("/ping", func(c *gin.Context) {
-		response.Success(c, response.MessageData{Message: "pong"})
-	})
-	router.GET("/health", func(c *gin.Context) {
-		sqlDB, err := cfg.Db.DB()
-		if err != nil || sqlDB.Ping() != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy"})
-			return
-		}
-		response.Success(c, gin.H{"status": "ok"})
-	})
+	routes.RegisterPublicRoutes(router, cfg.Db)
 	router.GET("/docs", func(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
 	})

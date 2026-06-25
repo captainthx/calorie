@@ -18,12 +18,17 @@ FROM alpine:3.22
 WORKDIR /app
 
 RUN apk add --no-cache ca-certificates tzdata
+RUN addgroup -S app && adduser -S -G app app
 
 COPY --from=build /out/api /app/api
+RUN chown app:app /app/api
 
 ENV GIN_MODE=release
 ENV PORT=8080
 
+USER app
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1
 
 CMD ["/app/api"]
