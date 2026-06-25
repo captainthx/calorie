@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/rand"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,6 +15,13 @@ import (
 func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
+
+		requestID := c.GetHeader("X-Request-ID")
+		if requestID == "" {
+			requestID = generateRequestID()
+		}
+		c.Header("X-Request-ID", requestID)
+
 		c.Next()
 
 		status := c.Writer.Status()
@@ -31,9 +40,7 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 			"path", path,
 			"status", status,
 			"duration", requestDuration(time.Since(start)),
-		}
-		if requestID := c.GetHeader("X-Request-ID"); requestID != "" {
-			attrs = append(attrs, "request_id", requestID)
+			"request_id", requestID,
 		}
 
 		if userData, exists := c.Get("user"); exists {
@@ -73,4 +80,10 @@ func requestDuration(d time.Duration) string {
 		return d.Truncate(time.Millisecond).String()
 	}
 	return d.Truncate(time.Microsecond).String()
+}
+
+func generateRequestID() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("%x", b)
 }

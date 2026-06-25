@@ -22,7 +22,9 @@ require (
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
+	github.com/getsentry/sentry-go v0.47.0 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
+	github.com/go-gormigrate/gormigrate/v2 v2.1.6 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/go-openapi/spec v0.20.4 // indirect
