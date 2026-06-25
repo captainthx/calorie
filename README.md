@@ -137,6 +137,8 @@ HTTP requests are logged with structured `slog` output.
 
 ## Docker
 
+### Backend
+
 Build the backend image:
 
 ```bash
@@ -159,6 +161,37 @@ docker run --rm -p 8080:8080 \
 ```
 
 For Linux, use a Docker network or set `DB_HOST` to a reachable PostgreSQL host.
+
+### Frontend
+
+Build the frontend image once (no env baked in):
+
+```bash
+docker build -t calorie-frontend ./frontend
+```
+
+Run on port 3000 (default backend `http://localhost:8080/api`):
+
+```bash
+docker run -d -p 3000:8080 --name calorie-ui calorie-frontend
+```
+
+Point to a different backend at runtime:
+
+```bash
+docker run -d -p 3000:8080 --name calorie-ui \
+  -e API_BASE_URL=http://your-backend:8080/api \
+  calorie-frontend
+```
+
+Stop and restart without losing the container:
+
+```bash
+docker stop calorie-ui
+docker start calorie-ui
+```
+
+Open `http://localhost:3000` in the browser. The API URL is injected at container start via `/env.js` — no rebuild needed to switch environments.
 
 ## CI
 
