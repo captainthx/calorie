@@ -97,6 +97,14 @@ func main() {
 	router.GET("/ping", func(c *gin.Context) {
 		response.Success(c, response.MessageData{Message: "pong"})
 	})
+	router.GET("/health", func(c *gin.Context) {
+		sqlDB, err := cfg.Db.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy"})
+			return
+		}
+		response.Success(c, gin.H{"status": "ok"})
+	})
 	router.GET("/docs", func(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
 	})
