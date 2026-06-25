@@ -74,6 +74,16 @@ DB_PASSWORD=mysecretpassword
 DB_NAME=mydatabase
 ```
 
+Optional overrides:
+
+```bash
+# Single DSN — takes precedence over all DB_* vars (set by PaaS like Railway/Render)
+DATABASE_URL=postgres://user:pass@host:5432/db?sslmode=require
+
+# Sentry error tracking — leave empty to disable
+SENTRY_DSN=https://...@sentry.io/...
+```
+
 `.env` is optional if you pass env vars directly.
 
 ## Frontend Runtime Config
@@ -98,7 +108,7 @@ Result: build the image once, then switch backend targets at runtime with `-e AP
 
 ## Auth Tokens
 
-The API uses predefined bearer tokens.
+The API uses predefined bearer tokens (seeded on first run when `GIN_MODE != release`).
 
 - User John: `Authorization: Bearer user-token-123`
 - User Jane: `Authorization: Bearer user-token-456`
@@ -110,7 +120,7 @@ Public routes:
 
 - `GET /ping` - simple liveness response
 - `GET /health` - readiness check; returns `{"status":"ok"}` or `{"status":"unhealthy"}`
-- `GET /docs` - Swagger UI redirect
+- `GET /docs` - Swagger UI redirect (only mounted when `GIN_MODE != release`)
 
 Authenticated routes:
 
@@ -121,7 +131,11 @@ Authenticated routes:
 - `DELETE /api/food-entries/:id`
 - `GET /api/daily-summary`
 - `GET /api/admin/food-entries`
+- `GET /api/admin/food-entries/:id`
 - `POST /api/admin/food-entries`
+- `PUT /api/admin/food-entries/:id`
+- `PATCH /api/admin/food-entries/:id`
+- `DELETE /api/admin/food-entries/:id`
 - `GET /api/admin/reports`
 
 ## Response Shape
