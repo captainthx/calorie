@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/captainthx/calorie/backend/internal/config"
@@ -13,7 +15,6 @@ import (
 	"github.com/captainthx/calorie/backend/internal/middleware"
 	routes "github.com/captainthx/calorie/backend/internal/routers"
 	"github.com/captainthx/calorie/backend/internal/user"
-	"github.com/captainthx/calorie/backend/pkg/response"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-gormigrate/gormigrate/v2"
@@ -68,17 +69,8 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	}))
-	router.GET("/ping", func(c *gin.Context) {
-		response.Success(c, response.MessageData{Message: "pong"})
-	})
-	router.GET("/health", func(c *gin.Context) {
-		sqlDB, err := cfg.Db.DB()
-		if err != nil || sqlDB.Ping() != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy"})
-			return
-		}
-		response.Success(c, gin.H{"status": "ok"})
-	})
+
+	routes.RegisterPublicRoutes(router, cfg.Db)
 	if cfg.Mode != gin.ReleaseMode {
 		router.GET("/docs", func(c *gin.Context) {
 			c.Redirect(http.StatusTemporaryRedirect, "/docs/index.html")
@@ -101,11 +93,31 @@ func main() {
 	routes.RegisterRoutes(api, cfg.Db)
 	routes.RegisterAdminRoutes(admin, cfg.Db)
 
-	logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
-	if err := router.Run(":" + cfg.Port); err != nil {
-		logger.Error("server stopped", "error", err)
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-quit
+	logger.Info("shutdown signal received")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("shutdown failed", "error", err)
 		os.Exit(1)
 	}
+	logger.Info("server stopped")
 }
 
 func initSentry() {

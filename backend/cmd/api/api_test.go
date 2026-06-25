@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 
 	gin.SetMode("test")
 	testRouter = gin.New()
-	testRouter.GET("/ping", func(c *gin.Context) { c.JSON(200, gin.H{"message": "pong"}) })
+	routes.RegisterPublicRoutes(testRouter, testDB)
 	userRepo := user.NewUsersRepository(testDB)
 	api := testRouter.Group("/api", middleware.AuthMiddleware(userRepo))
 	admin := api.Group("/admin", middleware.AdminMiddleware())
@@ -136,11 +136,24 @@ func TestIntegration(t *testing.T) {
 		yesterday: ago(1, 0).Format("2006-01-02"),
 	}
 
+	runPublicRouteTests(t)
 	runAuthChecks(t)
 	runDailySummaryTests(t, state)
 	runAdminReportTests(t)
 	runUserFoodEntryTests(t, state)
 	runAdminFoodEntryTests(t, state)
+}
+
+func runPublicRouteTests(t *testing.T) {
+	t.Helper()
+
+	t.Run("health_ok", func(t *testing.T) {
+		w := apiReq("GET", "/health", "", "")
+		if !checkCode(t, "health_ok", w, 200) {
+			return
+		}
+		assertEq(t, "status", "ok", decodeBody(w.Body.Bytes())["status"])
+	})
 }
 
 func runAuthChecks(t *testing.T) {
@@ -550,4 +563,15 @@ func runAdminReportTests(t *testing.T) {
 		assertEq(t, "comparison.previous_week", float64(8), comparison["previous_week"])
 		assertEq(t, "comparison.difference", float64(9), comparison["difference"])
 	})
+}
+
+func TestDatabasePoolConfig(t *testing.T) {
+	sqlDB, err := testDB.DB()
+	if err != nil {
+		t.Fatalf("get sql.DB: %v", err)
+	}
+	stats := sqlDB.Stats()
+	if stats.MaxOpenConnections != 25 {
+		t.Errorf("MaxOpenConnections = %d, want 25", stats.MaxOpenConnections)
+	}
 }

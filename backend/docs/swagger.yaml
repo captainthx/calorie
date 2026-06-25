@@ -778,6 +778,45 @@ paths:
       summary: Replace food entry
       tags:
       - Food Entries
+  /health:
+    get:
+      description: Return the API readiness based on database connectivity.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - Public
+  /ping:
+    get:
+      description: Return a simple pong response.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessBody'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.MessageData'
+              type: object
+      summary: Ping application
+      tags:
+      - Public
 securityDefinitions:
   BearerAuth:
     in: header

@@ -38,7 +38,7 @@ type Users struct {
 	Name               string   `gorm:"type:varchar(100);not null" json:"name"`
 	Role               UserRole `gorm:"type:user_role_enum;default:'USER';not null" json:"role"`
 	Token              string   `gorm:"type:varchar(100);unique" json:"token"`
-	DailyCalorieLimit  int      `gorm:"type:int;not null" json:"daily_calorie_limit"`
-	MonthlyPriceLimit  int      `gorm:"type:int;not null" json:"monthly_price_limit"`
+	DailyCalorieLimit  int      `gorm:"type:int;not null;default:2100" json:"daily_calorie_limit"`
+	MonthlyPriceLimit  int      `gorm:"type:int;not null;default:1000" json:"monthly_price_limit"`
 	gorm.Model
 }

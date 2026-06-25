@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,5 +30,10 @@ func loadDbFromDSN(dsn string) (*gorm.DB, error) {
 	if err := sqlDb.Ping(); err != nil {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
+
+	sqlDb.SetMaxOpenConns(25)
+	sqlDb.SetMaxIdleConns(5)
+	sqlDb.SetConnMaxLifetime(5 * time.Minute)
+
 	return db, nil
 }
