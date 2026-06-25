@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/captainthx/calorie/backend/internal/config"
@@ -116,11 +119,31 @@ func main() {
 	routes.RegisterRoutes(api, cfg.Db)
 	routes.RegisterAdminRoutes(admin, cfg.Db)
 
-	logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
-	if err := router.Run(":" + cfg.Port); err != nil {
-		logger.Error("server stopped", "error", err)
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Info("server starting", "port", cfg.Port, "mode", cfg.Mode)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-quit
+	logger.Info("shutdown signal received")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("shutdown failed", "error", err)
 		os.Exit(1)
 	}
+	logger.Info("server stopped")
 }
 
 func seedFoodEntries(db *gorm.DB, johnID, janeID uint) {
