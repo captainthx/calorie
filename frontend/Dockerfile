@@ -9,7 +9,6 @@ RUN npm run build
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# ponytail: nginx config inline — SPA routing needs try_files so react-router deep paths don't 404
 COPY <<'EOF' /etc/nginx/conf.d/default.conf
 server {
     listen 8080;
@@ -21,7 +20,6 @@ server {
 }
 EOF
 
-# ponytail: tiny entrypoint script beats a long shell one-liner and keeps runtime env injection readable
 COPY <<'EOF' /entrypoint.sh
 #!/bin/sh
 set -eu
