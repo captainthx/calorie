@@ -173,13 +173,13 @@ docker build -t calorie-frontend ./frontend
 Run on port 3000 (default backend `http://localhost:8080/api`):
 
 ```bash
-docker run -d -p 3000:80 --name calorie-ui calorie-frontend
+docker run -d -p 3000:8080 --name calorie-ui calorie-frontend
 ```
 
 Point to a different backend at runtime:
 
 ```bash
-docker run -d -p 3000:80 --name calorie-ui \
+docker run -d -p 3000:8080 --name calorie-ui \
   -e API_BASE_URL=http://your-backend:8080/api \
   calorie-frontend
 ```
@@ -187,8 +187,8 @@ docker run -d -p 3000:80 --name calorie-ui \
 Stop and restart without losing the container:
 
 ```bash
-docker stop calorie-frontend
-docker start calorie-frontend
+docker stop calorie-ui
+docker start calorie-ui
 ```
 
 Open `http://localhost:3000` in the browser. The API URL is injected at container start via `/env.js` — no rebuild needed to switch environments.
