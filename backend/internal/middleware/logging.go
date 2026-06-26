@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/captainthx/calorie/backend/internal/user"
+	sentry "github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -56,6 +57,7 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 			}
 			if lastErr := c.Errors.Last(); lastErr != nil {
 				attrs = append(attrs, "error", lastErr.Error())
+				sentry.CaptureException(lastErr.Unwrap())
 			}
 			logger.Error(msg, attrs...)
 			return

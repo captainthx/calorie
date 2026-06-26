@@ -35,10 +35,10 @@ import (
 // @name Authorization
 func main() {
 	initTimezone()
-	initSentry()
+	cfg, err := config.LoadConfig()
+	initSentry(cfg.SentryDns)
 	defer sentry.Flush(2 * time.Second)
 
-	cfg, err := config.LoadConfig()
 	logger := newLogger(os.Getenv("GIN_MODE"))
 	if err != nil {
 		logger.Error("load config failed", "error", err)
@@ -121,8 +121,7 @@ func main() {
 	logger.Info("server stopped")
 }
 
-func initSentry() {
-	dsn := os.Getenv("SENTRY_DSN")
+func initSentry(dsn string) {
 	if dsn == "" {
 		return
 	}

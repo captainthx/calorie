@@ -12,6 +12,7 @@ type Config struct {
 	Mode               string
 	CORSAllowedOrigins string
 	Db                 *gorm.DB
+	SentryDns          string
 }
 
 func LoadConfig() (*Config, error) {
@@ -26,6 +27,7 @@ func LoadConfig() (*Config, error) {
 	dbUser := getEnvKey("DB_USERNAME", "myuser")
 	dbPassword := getEnvKey("DB_PASSWORD", "mysecretpassword")
 	dbName := getEnvKey("DB_NAME", "mydatabase")
+	sentryDns := getEnvKey("SENTRY_DSN", "")
 
 	var db *gorm.DB
 	var err error
@@ -43,6 +45,7 @@ func LoadConfig() (*Config, error) {
 		Mode:               mode,
 		CORSAllowedOrigins: corsAllowedOrigins,
 		Db:                 db,
+		SentryDns:          sentryDns,
 	}, nil
 }
 
